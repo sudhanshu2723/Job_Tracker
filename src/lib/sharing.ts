@@ -123,3 +123,19 @@ export async function fanoutToFriends(
     skipDuplicates: true,
   });
 }
+
+/** Push many newly-created OWN postings to all accepted friends in one batch. */
+export async function fanoutManyToFriends(
+  ownerId: string,
+  ownerUsername: string,
+  apps: ShareSource[],
+): Promise<number> {
+  if (!apps.length) return 0;
+  const friends = await friendIdsOf(ownerId);
+  if (!friends.length) return 0;
+  const data = friends.flatMap((fid) =>
+    apps.map((a) => copyData(a, fid, ownerUsername)),
+  );
+  const res = await prisma.application.createMany({ data, skipDuplicates: true });
+  return res.count;
+}

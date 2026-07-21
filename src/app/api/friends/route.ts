@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import { existingFriendship, acceptFriendship } from "@/lib/sharing";
+import { existingFriendship, acceptFriendship, shareOwnAppsToUser } from "@/lib/sharing";
+import { BOT_USERNAME, ensureBotUser } from "@/lib/bot";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -53,10 +54,29 @@ export async function POST(req: Request) {
   const toUsername = String(body?.toUsername ?? "").trim().toLowerCase();
   if (!toUsername) return NextResponse.json({ error: "Enter a username." }, { status: 400 });
 
+  // Subscribing to the career_ops job feed: the bot auto-accepts + backfills.
+  const isBot = toUsername === BOT_USERNAME;
+  if (isBot) await ensureBotUser();
+
   const other = await prisma.user.findUnique({ where: { username: toUsername } });
   if (!other) return NextResponse.json({ error: "No user with that username." }, { status: 404 });
   if (other.id === session.userId)
     return NextResponse.json({ error: "You can't friend yourself." }, { status: 400 });
+
+  if (isBot) {
+    const prior = await existingFriendship(session.userId, other.id);
+    if (prior?.status === "accepted")
+      return NextResponse.json({ error: "You're already subscribed." }, { status: 409 });
+    if (prior) {
+      await prisma.friendship.update({ where: { id: prior.id }, data: { status: "accepted" } });
+    } else {
+      await prisma.friendship.create({
+        data: { requesterId: session.userId, addresseeId: other.id, status: "accepted" },
+      });
+    }
+    await shareOwnAppsToUser(other.id, other.username, session.userId);
+    return NextResponse.json({ ok: true, becameFriends: true });
+  }
 
   const existing = await existingFriendship(session.userId, other.id);
   if (existing) {

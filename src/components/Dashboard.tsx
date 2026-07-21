@@ -437,6 +437,7 @@ export default function Dashboard({ username }: { username: string }) {
                 <th>Referral</th>
                 <th>Status</th>
                 <th>Follow-up</th>
+                <th>Link</th>
                 <th aria-label="Actions" />
               </tr>
             </thead>
@@ -444,21 +445,7 @@ export default function Dashboard({ username }: { username: string }) {
               {visible.map((a) => (
                 <tr key={a.id}>
                   <td>
-                    <div className="cell-company">
-                      {a.company}
-                      {a.link && (
-                        <a
-                          className="linkout"
-                          href={a.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          title="Open job posting"
-                          aria-label="Open job posting"
-                        >
-                          <IconLink width={13} height={13} />
-                        </a>
-                      )}
-                    </div>
+                    <div className="cell-company">{a.company}</div>
                     <div className="cell-role">
                       {a.role}
                       {a.sharedFrom && (
@@ -511,6 +498,22 @@ export default function Dashboard({ username }: { username: string }) {
                       <span className={isFollowUpDue(a, today) ? "due" : ""}>
                         {formatDate(a.followUp)}
                       </span>
+                    ) : (
+                      <span className="cell-sub">—</span>
+                    )}
+                  </td>
+                  <td>
+                    {a.link ? (
+                      <a
+                        className="open-link"
+                        href={a.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Open job posting"
+                      >
+                        <IconLink width={13} height={13} />
+                        Open link
+                      </a>
                     ) : (
                       <span className="cell-sub">—</span>
                     )}

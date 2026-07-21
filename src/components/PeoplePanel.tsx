@@ -93,6 +93,32 @@ export function PeoplePanel({ onClose, onChanged }: Props) {
             </div>
           )}
 
+          {/* Daily job feed */}
+          <section className="people-section">
+            <h3>Daily job feed</h3>
+            <div className="req-item" style={{ marginBottom: 0 }}>
+              <div className="grow">
+                <span className="who">career_ops</span>
+                <div className="req-sub">
+                  Auto-scans Greenhouse/Ashby/Lever + LinkedIn/Indeed daily for fresher
+                  SDE, backend, full-stack, frontend, IoT &amp; AI/ML roles. Subscribe to
+                  sync new postings into your list.
+                </div>
+              </div>
+              <button
+                className="btn btn-primary"
+                onClick={() =>
+                  run(
+                    () => sendFriendRequest("career_ops"),
+                    "Subscribed — new jobs from career_ops will sync to your list daily.",
+                  )
+                }
+              >
+                Subscribe
+              </button>
+            </div>
+          </section>
+
           {/* Requests for you */}
           <section className="people-section">
             <h3>Requests for you</h3>
