@@ -497,7 +497,7 @@ body {
   background: var(--surface);
   box-shadow: var(--shadow-sm);
   /* Always hold a full page's height so the box never shrinks when empty. */
-  min-height: 1080px;
+  min-height: 1240px;
 }
 table.apps {
   width: 100%;
@@ -601,8 +601,16 @@ table.apps {
 }
 
 /* ---------- Empty state ---------- */
+/* Empty state now lives in a full-width cell, so the header stays visible and
+   the table keeps a full page's height instead of collapsing. */
+.empty-row td {
+  border-bottom: none;
+}
+.empty-row:hover {
+  background: transparent;
+}
 .empty {
-  min-height: 1080px;
+  min-height: 1150px;
   display: flex;
   flex-direction: column;
   align-items: center;

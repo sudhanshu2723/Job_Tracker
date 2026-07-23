@@ -60,10 +60,37 @@ export async function runChannelScan(channel: Channel): Promise<ChannelScanSumma
   return { ...base, added: added.length, syncedCopies };
 }
 
-/** Scan every registered channel. */
-export async function runAllChannels(): Promise<ChannelScanSummary[]> {
+/** All channel usernames that can be scanned. */
+export const SCANNABLE_CHANNELS = CHANNELS.map((c) => c.username);
+
+// Slow scanners (many HTTP fetches / scraping). Run these LAST so a single
+// all-channel run updates the many fast channels before the 60s Hobby cap.
+const HEAVY = new Set(["career_ops", "glassdoor"]);
+
+/**
+ * Scan a selected set of channels (default: all). `only`/`except` filter by
+ * username so each cron can target a single bot.
+ */
+export async function runChannels(filter?: {
+  only?: string[];
+  except?: string[];
+}): Promise<ChannelScanSummary[]> {
+  let list = CHANNELS;
+  if (filter?.only?.length) {
+    const s = new Set(filter.only);
+    list = list.filter((c) => s.has(c.username));
+  }
+  if (filter?.except?.length) {
+    const s = new Set(filter.except);
+    list = list.filter((c) => !s.has(c.username));
+  }
+  // Light channels first, heavy ones last (stable — preserves order otherwise).
+  list = [...list].sort(
+    (a, b) => Number(HEAVY.has(a.username)) - Number(HEAVY.has(b.username)),
+  );
+
   const summaries: ChannelScanSummary[] = [];
-  for (const channel of CHANNELS) {
+  for (const channel of list) {
     try {
       summaries.push(await runChannelScan(channel));
     } catch (err) {
@@ -80,3 +107,6 @@ export async function runAllChannels(): Promise<ChannelScanSummary[]> {
   }
   return summaries;
 }
+
+/** Scan every registered channel. */
+export const runAllChannels = () => runChannels();

@@ -439,34 +439,38 @@ export default function Dashboard({ username }: { username: string }) {
 
       {/* Table */}
       <div className="table-wrap">
-        {visible.length === 0 ? (
-          <div className="empty">
-            <h3>{apps.length ? "No matches" : "No applications yet"}</h3>
-            <p>
-              {apps.length
-                ? "Try clearing a filter or the search box."
-                : "Add your first application to start tracking your pipeline."}
-            </p>
-          </div>
-        ) : (
-          <table className="apps">
-            <thead>
-              <tr>
-                <th>Company</th>
-                <th>Role</th>
-                <th>Shared by</th>
-                <th>Country</th>
-                <th>Applied</th>
-                <th>Fetched</th>
-                <th>Referral</th>
-                <th>Status</th>
-                <th>Follow-up</th>
-                <th>Link</th>
-                <th>Edit / Delete</th>
+        <table className="apps">
+          <thead>
+            <tr>
+              <th>Company</th>
+              <th>Role</th>
+              <th>Shared by</th>
+              <th>Country</th>
+              <th>Applied</th>
+              <th>Fetched</th>
+              <th>Referral</th>
+              <th>Status</th>
+              <th>Follow-up</th>
+              <th>Link</th>
+              <th>Edit / Delete</th>
+            </tr>
+          </thead>
+          <tbody>
+            {visible.length === 0 ? (
+              <tr className="empty-row">
+                <td colSpan={11}>
+                  <div className="empty">
+                    <h3>{apps.length ? "No matches" : "No applications yet"}</h3>
+                    <p>
+                      {apps.length
+                        ? "Try clearing a filter or the search box."
+                        : "Add your first application to start tracking your pipeline."}
+                    </p>
+                  </div>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {paged.map((a) => (
+            ) : (
+              paged.map((a) => (
                 <tr key={a.id}>
                   <td data-label="Company">
                     <div className="cell-company">{a.company}</div>
@@ -580,10 +584,10 @@ export default function Dashboard({ username }: { username: string }) {
                     </div>
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
 
       <Pager
