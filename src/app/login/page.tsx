@@ -97,7 +97,33 @@ export default function LoginPage() {
 
   return (
     <div className="auth-wrap">
-      <div className="auth-card">
+      {/* Left — brand + slogan */}
+      <aside className="auth-brand">
+        <div className="auth-brand-inner">
+          <div className="auth-brand-logo">
+            <div className="brand-mark">JT</div>
+            <span>JobTrack</span>
+          </div>
+          <h2 className="auth-slogan">
+            Track every application.
+            <br />
+            Land the job you want.
+          </h2>
+          <p className="auth-slogan-sub">
+            Your whole job hunt — applications, interviews, follow-ups and live
+            job feeds — organised in one private, always-in-sync dashboard.
+          </p>
+          <ul className="auth-features">
+            <li>Track every application from wishlist to offer</li>
+            <li>Subscribe to live job feeds from 10+ sources</li>
+            <li>Follow friends and share your pipeline</li>
+          </ul>
+        </div>
+      </aside>
+
+      {/* Right — auth form */}
+      <div className="auth-panel">
+        <div className="auth-card">
         <div className="brand-mark">JT</div>
         <h1 className="auth-title">
           {mode === "login"
@@ -294,6 +320,7 @@ export default function LoginPage() {
             </div>
           </form>
         )}
+        </div>
       </div>
     </div>
   );
