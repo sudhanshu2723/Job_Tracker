@@ -79,8 +79,8 @@ export default function FriendsView({ username }: { username: string }) {
   }, [query, runSearch]);
 
   async function refresh() {
-    await reload();
-    await runSearch(query); // keep the results' relationship state fresh
+    // Parallel — halves the wait vs sequential round-trips to the DB.
+    await Promise.all([reload(), runSearch(query)]);
   }
 
   async function run(name: string, fn: () => Promise<unknown>, ok: string, fail: string) {
@@ -91,13 +91,19 @@ export default function FriendsView({ username }: { username: string }) {
       await refresh();
     } catch (e) {
       toast(e instanceof Error ? e.message : fail, "error");
+      await refresh(); // resync the UI to the true server state after a failure
     } finally {
       setBusy(null);
     }
   }
 
-  const add = (p: PersonResult) =>
-    run(p.username, () => sendFriendRequest(p.username), `Request sent to ${p.username}`, "Couldn't send request");
+  const add = (p: PersonResult) => {
+    // Optimistic: flip the button to "Requested" instantly; refresh confirms it.
+    setResults((rs) =>
+      rs.map((r) => (r.username === p.username ? { ...r, relationship: "outgoing" } : r)),
+    );
+    return run(p.username, () => sendFriendRequest(p.username), `Request sent to ${p.username}`, "Couldn't send request");
+  };
   const accept = (id: string, name: string) =>
     run(name, () => acceptFriend(id), `You're now friends with ${name}`, "Couldn't accept");
   const decline = (id: string, name: string) =>

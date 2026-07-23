@@ -2,15 +2,19 @@ import { NextResponse } from "next/server";
 import { prisma, warmupDb } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { CHANNEL_META } from "@/lib/channelsMeta";
+import { enforceRateLimit } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // GET /api/channels — per-channel stats for the current user.
-export async function GET() {
+export async function GET(req: Request) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   const me = session.userId;
+
+  const limited = await enforceRateLimit(req, "channels-list", 60, 60, me);
+  if (limited) return limited;
 
   await warmupDb();
 

@@ -14,9 +14,12 @@ const unauthorized = () =>
   NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
 // GET /api/applications — list the current user's applications
-export async function GET() {
+export async function GET(req: Request) {
   const session = await getSession();
   if (!session) return unauthorized();
+
+  const limited = await enforceRateLimit(req, "app-list", 120, 60, session.userId);
+  if (limited) return limited;
 
   await warmupDb();
   const apps = await prisma.application.findMany({
