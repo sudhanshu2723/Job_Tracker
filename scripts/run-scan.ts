@@ -3,6 +3,8 @@
 //   node --env-file=.env --import tsx scripts/run-scan.ts            (ATS + LinkedIn/Indeed)
 //   node --env-file=.env --import tsx scripts/run-scan.ts --ats-only (ATS boards only)
 
+export {}; // isolate module scope (scripts/scan.ts also defines `main`)
+
 async function main() {
   // Force ATS-only BEFORE importing (portals reads ENABLE_JOBSPY at module load).
   if (process.argv.includes("--ats-only")) process.env.ENABLE_JOBSPY = "false";

@@ -63,9 +63,9 @@ export async function runChannelScan(channel: Channel): Promise<ChannelScanSumma
 /** All channel usernames that can be scanned. */
 export const SCANNABLE_CHANNELS = CHANNELS.map((c) => c.username);
 
-// Slow scanners (many HTTP fetches / scraping). Run these LAST so a single
-// all-channel run updates the many fast channels before the 60s Hobby cap.
-const HEAVY = new Set(["career_ops", "glassdoor"]);
+// Slow scanners (many HTTP fetches / multi-country / scraping). Run these LAST
+// so a single all-channel run updates the many fast channels before the 60s cap.
+const HEAVY = new Set(["career_ops", "glassdoor", "adzuna", "jooble"]);
 
 /**
  * Scan a selected set of channels (default: all). `only`/`except` filter by

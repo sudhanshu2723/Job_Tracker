@@ -37,15 +37,15 @@ export const CHANNEL_META: ChannelMeta[] = [
   },
   {
     username: "adzuna",
-    label: "Adzuna — India (official API)",
+    label: "Adzuna — Worldwide (official API)",
     description:
-      "Indian tech jobs via Adzuna's official API — all levels. Needs an API key configured.",
+      "Tech jobs across the US, UK, India, Canada, Australia & Germany via Adzuna's official API — all levels.",
   },
   {
     username: "jooble",
-    label: "Jooble — India (aggregator)",
+    label: "Jooble — Worldwide (aggregator)",
     description:
-      "Indian tech jobs aggregated by Jooble — all levels. Needs an API key configured.",
+      "Tech jobs across the US, UK, India, Canada & Germany aggregated by Jooble — all levels.",
   },
   {
     username: "himalayas",
@@ -62,6 +62,23 @@ export const CHANNEL_META: ChannelMeta[] = [
     label: "Glassdoor (scraper)",
     description:
       "Jobs from Glassdoor via jobspy-js. Local-only scraper — runs when ENABLE_JOBSPY is on.",
+  },
+  {
+    username: "themuse",
+    label: "The Muse — Global",
+    description:
+      "Roles from thousands of companies worldwide via The Muse's free public API (all levels).",
+  },
+  {
+    username: "workingnomads",
+    label: "Working Nomads — Remote worldwide",
+    description: "Remote jobs from around the world via Working Nomads' free feed (all levels).",
+  },
+  {
+    username: "arbeitsagentur",
+    label: "Arbeitsagentur — Germany / EU (official)",
+    description:
+      "Jobs from Germany's Federal Employment Agency — one of Europe's largest job datasets (all levels).",
   },
 ];
 

@@ -1,0 +1,55 @@
+name: Scan job channels
+
+on:
+  schedule:
+    # Every 6 hours, at :07 (off-peak — GitHub delays runs scheduled at :00).
+    - cron: "7 */6 * * *"
+  workflow_dispatch: {} # manual "Run workflow" button
+
+# Don't let a slow run overlap the next scheduled one.
+concurrency:
+  group: job-scan
+  cancel-in-progress: false
+
+jobs:
+  # Build the channel list from the code so new channels are picked up automatically.
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      channels: ${{ steps.list.outputs.channels }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: list
+        run: |
+          channels=$(grep -oE 'username: "[^"]+"' src/lib/channelsMeta.ts \
+            | sed -E 's/.*"([^"]+)".*/\1/' | jq -R . | jq -cs .)
+          echo "channels=$channels" >> "$GITHUB_OUTPUT"
+          echo "Channels to scan: $channels"
+
+  # One parallel job per channel — no single job carries the whole scan.
+  scan:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false # one channel failing must not cancel the others
+      matrix:
+        channel: ${{ fromJSON(needs.prepare.outputs.channels) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci # postinstall runs `prisma generate`
+      - name: Scan ${{ matrix.channel }}
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          ADZUNA_APP_ID: ${{ secrets.ADZUNA_APP_ID }}
+          ADZUNA_APP_KEY: ${{ secrets.ADZUNA_APP_KEY }}
+          ADZUNA_COUNTRY: ${{ vars.ADZUNA_COUNTRY }}
+          JOOBLE_KEY: ${{ secrets.JOOBLE_KEY }}
+          JOOBLE_LOCATION: ${{ vars.JOOBLE_LOCATION }}
+          ENABLE_JOBSPY: ${{ vars.ENABLE_JOBSPY }}
+        run: npx tsx scripts/scan.ts --only=${{ matrix.channel }}
