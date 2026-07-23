@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { runDailyScan } from "@/lib/dailyScan";
+import { runAllChannels } from "@/lib/dailyScan";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,8 +16,8 @@ async function handle(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   try {
-    const summary = await runDailyScan();
-    return NextResponse.json({ ok: true, ...summary });
+    const channels = await runAllChannels();
+    return NextResponse.json({ ok: true, channels });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Scan failed" },

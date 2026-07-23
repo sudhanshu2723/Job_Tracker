@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma, warmupDb } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { existingFriendship, acceptFriendship, shareOwnAppsToUser } from "@/lib/sharing";
-import { BOT_USERNAME, ensureBotUser } from "@/lib/bot";
+import { ensureBotUser } from "@/lib/bot";
+import { CHANNEL_USERNAMES } from "@/lib/channelsMeta";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,6 +17,7 @@ export async function GET() {
   if (!session) return unauthorized();
   const me = session.userId;
 
+  await warmupDb();
   const rows = await prisma.friendship.findMany({
     where: { OR: [{ requesterId: me }, { addresseeId: me }] },
     orderBy: { createdAt: "desc" },
@@ -54,9 +56,9 @@ export async function POST(req: Request) {
   const toUsername = String(body?.toUsername ?? "").trim().toLowerCase();
   if (!toUsername) return NextResponse.json({ error: "Enter a username." }, { status: 400 });
 
-  // Subscribing to the career_ops job feed: the bot auto-accepts + backfills.
-  const isBot = toUsername === BOT_USERNAME;
-  if (isBot) await ensureBotUser();
+  // Subscribing to a channel feed: the bot auto-accepts + backfills.
+  const isBot = CHANNEL_USERNAMES.has(toUsername);
+  if (isBot) await ensureBotUser(toUsername);
 
   const other = await prisma.user.findUnique({ where: { username: toUsername } });
   if (!other) return NextResponse.json({ error: "No user with that username." }, { status: 404 });

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma, warmupDb } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { APP_SELECT, sanitizeDraft } from "@/lib/appShape";
 import { fanoutToFriends } from "@/lib/sharing";
@@ -15,6 +15,7 @@ export async function GET() {
   const session = await getSession();
   if (!session) return unauthorized();
 
+  await warmupDb();
   const apps = await prisma.application.findMany({
     where: { userId: session.userId },
     orderBy: { createdAt: "desc" },

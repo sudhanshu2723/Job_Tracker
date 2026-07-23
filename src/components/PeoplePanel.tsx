@@ -13,6 +13,7 @@ import {
   type InvitesResponse,
   type FriendsResponse,
 } from "@/lib/social";
+import { CHANNEL_META, CHANNEL_USERNAMES } from "@/lib/channelsMeta";
 import { IconClose } from "./icons";
 
 interface Props {
@@ -66,6 +67,7 @@ export function PeoplePanel({ onClose, onChanged }: Props) {
   const outgoingInvites = invites?.outgoing ?? [];
   const outgoingFriends = friends?.outgoing ?? [];
   const friendList = friends?.friends ?? [];
+  const humanFriends = friendList.filter((f) => !CHANNEL_USERNAMES.has(f.username));
   const hasRequests = incomingInvites.length + incomingFriends.length > 0;
   const hasPending = outgoingInvites.length + outgoingFriends.length > 0;
 
@@ -93,30 +95,40 @@ export function PeoplePanel({ onClose, onChanged }: Props) {
             </div>
           )}
 
-          {/* Daily job feed */}
+          {/* Job feed channels */}
           <section className="people-section">
-            <h3>Daily job feed</h3>
-            <div className="req-item" style={{ marginBottom: 0 }}>
-              <div className="grow">
-                <span className="who">career_ops</span>
-                <div className="req-sub">
-                  Auto-scans Greenhouse/Ashby/Lever + LinkedIn/Indeed daily for fresher
-                  SDE, backend, full-stack, frontend, IoT &amp; AI/ML roles. Subscribe to
-                  sync new postings into your list.
+            <h3>Job feed channels</h3>
+            <p className="people-note">
+              Subscribe to any feed — new matching jobs sync into your list automatically.
+            </p>
+            {CHANNEL_META.map((ch) => {
+              const sub = friendList.find((f) => f.username === ch.username);
+              return (
+                <div className="req-item" key={ch.username}>
+                  <div className="grow">
+                    <span className="who">{ch.label}</span>
+                    <div className="req-sub">{ch.description}</div>
+                  </div>
+                  {sub ? (
+                    <button
+                      className="btn btn-ghost btn-danger"
+                      onClick={() => run(() => removeFriend(sub.id))}
+                    >
+                      Unsubscribe
+                    </button>
+                  ) : (
+                    <button
+                      className="btn btn-primary"
+                      onClick={() =>
+                        run(() => sendFriendRequest(ch.username), `Subscribed to ${ch.label}.`)
+                      }
+                    >
+                      Subscribe
+                    </button>
+                  )}
                 </div>
-              </div>
-              <button
-                className="btn btn-primary"
-                onClick={() =>
-                  run(
-                    () => sendFriendRequest("career_ops"),
-                    "Subscribed — new jobs from career_ops will sync to your list daily.",
-                  )
-                }
-              >
-                Subscribe
-              </button>
-            </div>
+              );
+            })}
           </section>
 
           {/* Requests for you */}
@@ -159,12 +171,12 @@ export function PeoplePanel({ onClose, onChanged }: Props) {
 
           {/* Friends */}
           <section className="people-section">
-            <h3>Your friends ({friendList.length})</h3>
-            {friendList.length === 0 ? (
+            <h3>Your friends ({humanFriends.length})</h3>
+            {humanFriends.length === 0 ? (
               <div className="empty-mini">No friends yet. Add one below to start syncing postings.</div>
             ) : (
               <div className="friend-tags">
-                {friendList.map((f) => (
+                {humanFriends.map((f) => (
                   <span className="friend-tag" key={f.id}>
                     {f.username}
                     <button

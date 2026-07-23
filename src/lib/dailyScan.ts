@@ -1,76 +1,41 @@
-import { prisma } from "./prisma";
-import { scanPortals, type ScannedJob } from "./scanner";
-import { scanJobSpy } from "./jobspyScanner";
-import { JOBSPY } from "./portals";
+import { prisma, warmupDb } from "./prisma";
 import { ensureBotUser } from "./bot";
 import { fanoutManyToFriends } from "./sharing";
 import { deriveCountry } from "./countries";
+import { CHANNELS, type Channel } from "./channels";
 
-export interface DailyScanSummary {
-  scannedCompanies: number;
-  atsMatches: number;
-  jobspyMatches: number;
-  totalMatches: number;
+export interface ChannelScanSummary {
+  channel: string;
+  scanned: number;
+  matches: number;
   added: number;
   syncedCopies: number;
   errors: number;
 }
 
 /**
- * The daily job: scan the ATS portals (always) plus LinkedIn/Indeed via JobSpy
- * (when enabled), add brand-new postings to the career_ops bot's list, and fan
- * those out to everyone friended with the bot.
+ * Scan one channel's source, add brand-new postings to that channel's bot
+ * account, and fan them out to everyone subscribed (friended) to the bot.
  */
-export async function runDailyScan(): Promise<DailyScanSummary> {
-  const bot = await ensureBotUser();
+export async function runChannelScan(channel: Channel): Promise<ChannelScanSummary> {
+  await warmupDb(); // wake Neon if it has suspended
+  const bot = await ensureBotUser(channel.username);
+  const result = await channel.scan();
 
-  const ats = await scanPortals();
-
-  const jobspy: {
-    jobs: ScannedJob[];
-    scannedCompanies: number;
-    errors: { company: string; error: string }[];
-  } = { jobs: [], scannedCompanies: 0, errors: [] };
-  if (JOBSPY.enabled) {
-    try {
-      const r = await scanJobSpy();
-      jobspy.jobs = r.jobs;
-      jobspy.scannedCompanies = r.scannedCompanies;
-      jobspy.errors = r.errors;
-    } catch {
-      jobspy.errors.push({ company: "jobspy", error: "scan failed" });
-    }
-  }
-
-  // Merge both sources, deduped by link.
-  const seen = new Set<string>();
-  const merged: ScannedJob[] = [];
-  for (const j of [...ats.jobs, ...jobspy.jobs]) {
-    if (j.link && !seen.has(j.link)) {
-      seen.add(j.link);
-      merged.push(j);
-    }
-  }
-
-  // Dedupe against what the bot already collected (by link).
   const existing = await prisma.application.findMany({
     where: { userId: bot.id },
     select: { link: true },
   });
   const known = new Set(existing.map((e) => e.link).filter(Boolean));
-  const fresh = merged.filter((j) => j.link && !known.has(j.link));
+  const fresh = result.jobs.filter((j) => j.link && !known.has(j.link));
 
-  const summaryBase = {
-    scannedCompanies: ats.scannedCompanies + jobspy.scannedCompanies,
-    atsMatches: ats.jobs.length,
-    jobspyMatches: jobspy.jobs.length,
-    totalMatches: merged.length,
-    errors: ats.errors.length + jobspy.errors.length,
+  const base = {
+    channel: channel.username,
+    scanned: result.scannedCompanies,
+    matches: result.jobs.length,
+    errors: result.errors.length,
   };
-
-  if (fresh.length === 0) {
-    return { ...summaryBase, added: 0, syncedCopies: 0 };
-  }
+  if (fresh.length === 0) return { ...base, added: 0, syncedCopies: 0 };
 
   await prisma.application.createMany({
     data: fresh.map((j) => ({
@@ -81,7 +46,7 @@ export async function runDailyScan(): Promise<DailyScanSummary> {
       location: j.location,
       country: deriveCountry(j.location),
       status: "wishlist",
-      source: "career-ops scan",
+      source: channel.username,
     })),
     skipDuplicates: true,
   });
@@ -92,6 +57,26 @@ export async function runDailyScan(): Promise<DailyScanSummary> {
   });
 
   const syncedCopies = await fanoutManyToFriends(bot.id, bot.username, added);
+  return { ...base, added: added.length, syncedCopies };
+}
 
-  return { ...summaryBase, added: added.length, syncedCopies };
+/** Scan every registered channel. */
+export async function runAllChannels(): Promise<ChannelScanSummary[]> {
+  const summaries: ChannelScanSummary[] = [];
+  for (const channel of CHANNELS) {
+    try {
+      summaries.push(await runChannelScan(channel));
+    } catch (err) {
+      summaries.push({
+        channel: channel.username,
+        scanned: 0,
+        matches: 0,
+        added: 0,
+        syncedCopies: 0,
+        errors: 1,
+      });
+      console.error(`channel ${channel.username} failed:`, err);
+    }
+  }
+  return summaries;
 }
