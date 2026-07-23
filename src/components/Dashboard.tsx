@@ -45,7 +45,13 @@ import {
 import { PeoplePanel } from "./PeoplePanel";
 import { getInvites, getFriends } from "@/lib/social";
 
-type SortKey = "recent" | "oldest" | "company" | "followup";
+type SortKey = "fetched" | "fetchedOld" | "recent" | "oldest" | "company" | "followup";
+type FetchedFilter = "all" | "24h" | "7d" | "30d";
+const FETCHED_WINDOWS: Record<Exclude<FetchedFilter, "all">, number> = {
+  "24h": 86_400_000,
+  "7d": 7 * 86_400_000,
+  "30d": 30 * 86_400_000,
+};
 type Theme = "light" | "dark";
 
 export default function Dashboard({ username }: { username: string }) {
@@ -61,7 +67,8 @@ export default function Dashboard({ username }: { username: string }) {
   const [countryFilter, setCountryFilter] = useState<string>("all");
   const [levelFilter, setLevelFilter] = useState<"all" | "fresher" | "experienced">("all");
   const [refFilter, setRefFilter] = useState<"all" | "yes" | "no">("all");
-  const [sort, setSort] = useState<SortKey>("recent");
+  const [fetchedFilter, setFetchedFilter] = useState<FetchedFilter>("all");
+  const [sort, setSort] = useState<SortKey>("fetched");
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Application | null>(null);
@@ -216,6 +223,10 @@ export default function Dashboard({ username }: { username: string }) {
       if (!matchesLevel(a.role, levelFilter)) return false;
       if (refFilter === "yes" && !a.referral) return false;
       if (refFilter === "no" && a.referral) return false;
+      if (fetchedFilter !== "all") {
+        if (!a.createdAt) return false;
+        if (Date.now() - Date.parse(a.createdAt) > FETCHED_WINDOWS[fetchedFilter]) return false;
+      }
       if (q) {
         const hay = `${a.company} ${a.role} ${a.location}`.toLowerCase();
         if (!hay.includes(q)) return false;
@@ -224,6 +235,10 @@ export default function Dashboard({ username }: { username: string }) {
     });
     list = [...list].sort((a, b) => {
       switch (sort) {
+        case "fetched":
+          return (b.createdAt || "").localeCompare(a.createdAt || "");
+        case "fetchedOld":
+          return (a.createdAt || "").localeCompare(b.createdAt || "");
         case "oldest":
           return (a.dateApplied || "9999").localeCompare(b.dateApplied || "9999");
         case "company":
@@ -235,7 +250,7 @@ export default function Dashboard({ username }: { username: string }) {
       }
     });
     return list;
-  }, [apps, search, statusFilter, sourceFilter, countryFilter, levelFilter, refFilter, sort]);
+  }, [apps, search, statusFilter, sourceFilter, countryFilter, levelFilter, refFilter, fetchedFilter, sort]);
 
   if (!loaded) {
     return <div className="app" aria-busy="true" />;
@@ -438,12 +453,25 @@ export default function Dashboard({ username }: { username: string }) {
         </select>
         <select
           className="select"
+          value={fetchedFilter}
+          onChange={(e) => setFetchedFilter(e.target.value as FetchedFilter)}
+          aria-label="Filter by when fetched"
+        >
+          <option value="all">Fetched: any time</option>
+          <option value="24h">Fetched: last 24h</option>
+          <option value="7d">Fetched: last 7 days</option>
+          <option value="30d">Fetched: last 30 days</option>
+        </select>
+        <select
+          className="select"
           value={sort}
           onChange={(e) => setSort(e.target.value as SortKey)}
           aria-label="Sort"
         >
-          <option value="recent">Newest first</option>
-          <option value="oldest">Oldest first</option>
+          <option value="fetched">Fetched: newest first</option>
+          <option value="fetchedOld">Fetched: oldest first</option>
+          <option value="recent">Newest applied</option>
+          <option value="oldest">Oldest applied</option>
           <option value="company">Company A–Z</option>
           <option value="followup">Follow-up soonest</option>
         </select>
@@ -468,6 +496,7 @@ export default function Dashboard({ username }: { username: string }) {
                 <th>Source</th>
                 <th>Country</th>
                 <th>Applied</th>
+                <th>Fetched</th>
                 <th>Referral</th>
                 <th>Status</th>
                 <th>Follow-up</th>
@@ -499,6 +528,16 @@ export default function Dashboard({ username }: { username: string }) {
                       <>
                         <div>{formatDate(a.dateApplied)}</div>
                         <div className="cell-sub">{agoLabel(a.dateApplied, today)}</div>
+                      </>
+                    ) : (
+                      <span className="cell-sub">—</span>
+                    )}
+                  </td>
+                  <td className="tnum">
+                    {a.createdAt ? (
+                      <>
+                        <div>{formatDate(a.createdAt.slice(0, 10))}</div>
+                        <div className="cell-sub">{agoLabel(a.createdAt.slice(0, 10), today)}</div>
                       </>
                     ) : (
                       <span className="cell-sub">—</span>

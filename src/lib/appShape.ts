@@ -23,6 +23,7 @@ export const APP_SELECT = {
   followUp: true,
   notes: true,
   sharedFrom: true,
+  createdAt: true,
 } as const;
 
 /** Coerce an untrusted request body into a safe, complete draft. */

@@ -74,4 +74,6 @@ export interface Application extends ApplicationDraft {
   id: string;
   /** Username of the friend this posting was shared from (null/absent if self-created). */
   sharedFrom?: string | null;
+  /** ISO datetime the row was fetched/added to the tracker. */
+  createdAt?: string;
 }
