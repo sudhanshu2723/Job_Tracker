@@ -704,6 +704,34 @@ table.apps {
   gap: 7px;
 }
 
+/* ---------- Pagination ---------- */
+.pager {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+.pager-info {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-right: auto;
+}
+.pager .btn {
+  min-width: 36px;
+  justify-content: center;
+  padding: 8px 10px;
+}
+.pager-num.active {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: transparent;
+}
+.pager-ellipsis {
+  color: var(--muted);
+  padding: 0 2px;
+}
+
 @keyframes fade {
   from {
     opacity: 0;

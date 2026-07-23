@@ -45,6 +45,22 @@ import {
 import { PeoplePanel } from "./PeoplePanel";
 import { getInvites, getFriends } from "@/lib/social";
 
+const PAGE_SIZE = 20;
+
+/** Compact page list with ellipses, e.g. 1 … 4 5 6 … 20. */
+function pageNumbers(current: number, total: number): (number | "…")[] {
+  const set = new Set<number>([1, total, current, current - 1, current + 1]);
+  const arr = [...set].filter((p) => p >= 1 && p <= total).sort((a, b) => a - b);
+  const out: (number | "…")[] = [];
+  let prev = 0;
+  for (const p of arr) {
+    if (p - prev > 1) out.push("…");
+    out.push(p);
+    prev = p;
+  }
+  return out;
+}
+
 type SortKey = "fetched" | "fetchedOld" | "recent" | "oldest" | "company" | "followup";
 type FetchedFilter = "all" | "24h" | "7d" | "30d";
 const FETCHED_WINDOWS: Record<Exclude<FetchedFilter, "all">, number> = {
@@ -69,6 +85,7 @@ export default function Dashboard({ username }: { username: string }) {
   const [refFilter, setRefFilter] = useState<"all" | "yes" | "no">("all");
   const [fetchedFilter, setFetchedFilter] = useState<FetchedFilter>("all");
   const [sort, setSort] = useState<SortKey>("fetched");
+  const [page, setPage] = useState(1);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Application | null>(null);
@@ -251,6 +268,15 @@ export default function Dashboard({ username }: { username: string }) {
     });
     return list;
   }, [apps, search, statusFilter, sourceFilter, countryFilter, levelFilter, refFilter, fetchedFilter, sort]);
+
+  // Reset to page 1 whenever the filtered result set changes.
+  useEffect(() => {
+    setPage(1);
+  }, [search, statusFilter, sourceFilter, countryFilter, levelFilter, refFilter, fetchedFilter, sort]);
+
+  const totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paged = visible.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   if (!loaded) {
     return <div className="app" aria-busy="true" />;
@@ -505,7 +531,7 @@ export default function Dashboard({ username }: { username: string }) {
               </tr>
             </thead>
             <tbody>
-              {visible.map((a) => (
+              {paged.map((a) => (
                 <tr key={a.id}>
                   <td>
                     <div className="cell-company">{a.company}</div>
@@ -621,6 +647,48 @@ export default function Dashboard({ username }: { username: string }) {
           </table>
         )}
       </div>
+
+      {visible.length > 0 && (
+        <div className="pager">
+          <span className="pager-info">
+            {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, visible.length)} of{" "}
+            {visible.length}
+          </span>
+          {totalPages > 1 && (
+            <>
+              <button
+                className="btn"
+                disabled={safePage === 1}
+                onClick={() => setPage(safePage - 1)}
+              >
+                Prev
+              </button>
+              {pageNumbers(safePage, totalPages).map((p, i) =>
+                p === "…" ? (
+                  <span className="pager-ellipsis" key={`e${i}`}>
+                    …
+                  </span>
+                ) : (
+                  <button
+                    key={p}
+                    className={`btn pager-num${p === safePage ? " active" : ""}`}
+                    onClick={() => setPage(p)}
+                  >
+                    {p}
+                  </button>
+                ),
+              )}
+              <button
+                className="btn"
+                disabled={safePage === totalPages}
+                onClick={() => setPage(safePage + 1)}
+              >
+                Next
+              </button>
+            </>
+          )}
+        </div>
+      )}
 
       <div className="hint">
         <IconBell width={13} height={13} />
