@@ -47,6 +47,16 @@ export const CHANNEL_META: ChannelMeta[] = [
     description:
       "Indian tech jobs aggregated by Jooble — all levels. Needs an API key configured.",
   },
+  {
+    username: "himalayas",
+    label: "Himalayas — Remote jobs",
+    description: "Remote roles via Himalayas' official API (all levels).",
+  },
+  {
+    username: "weworkremotely",
+    label: "We Work Remotely",
+    description: "Remote programming roles from the WeWorkRemotely RSS feed (all levels).",
+  },
 ];
 
 export const CHANNEL_USERNAMES = new Set(CHANNEL_META.map((c) => c.username));

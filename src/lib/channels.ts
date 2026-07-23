@@ -11,6 +11,8 @@ import { scanRemoteOk } from "./sources/remoteok";
 import { scanJobicy } from "./sources/jobicy";
 import { scanAdzuna } from "./sources/adzuna";
 import { scanJooble } from "./sources/jooble";
+import { scanHimalayas } from "./sources/himalayas";
+import { scanWeWorkRemotely } from "./sources/weworkremotely";
 import { JOBSPY } from "./portals";
 
 export interface Channel extends ChannelMeta {
@@ -58,6 +60,8 @@ const SCANNERS: Record<string, () => Promise<ScanResult>> = {
   jobicy: scanJobicy,
   adzuna: scanAdzuna,
   jooble: scanJooble,
+  himalayas: scanHimalayas,
+  weworkremotely: scanWeWorkRemotely,
 };
 
 export const CHANNELS: Channel[] = CHANNEL_META.filter((m) => SCANNERS[m.username]).map((m) => ({
