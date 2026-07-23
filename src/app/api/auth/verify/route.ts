@@ -42,7 +42,14 @@ export async function POST(req: Request) {
   let user;
   try {
     user = await prisma.user.create({
-      data: { email, username: pending.username, passwordHash: pending.passwordHash },
+      data: {
+        email,
+        username: pending.username,
+        passwordHash: pending.passwordHash,
+        isChannel: pending.isChannel,
+        channelLabel: pending.channelLabel,
+        channelDescription: pending.channelDescription,
+      },
       select: { id: true, username: true },
     });
   } catch {

@@ -43,6 +43,32 @@ describe("registerSchema", () => {
     const r = parseBody(registerSchema, { email: "a@b.co", username: "bad name!", password: "secret1" });
     expect(r.ok).toBe(false);
   });
+
+  it("defaults to a non-channel account", () => {
+    const r = parseBody(registerSchema, { email: "a@b.co", username: "bobdev", password: "secret1" });
+    expect(r.ok && r.data.isChannel).toBe(false);
+  });
+
+  it("requires a name and description when registering as a channel", () => {
+    expect(
+      parseBody(registerSchema, {
+        email: "a@b.co", username: "bobdev", password: "secret1",
+        isChannel: true, channelLabel: "", channelDescription: "plenty of detail here",
+      }).ok,
+    ).toBe(false);
+    expect(
+      parseBody(registerSchema, {
+        email: "a@b.co", username: "bobdev", password: "secret1",
+        isChannel: true, channelLabel: "Acme Jobs", channelDescription: "too short",
+      }).ok,
+    ).toBe(false);
+    expect(
+      parseBody(registerSchema, {
+        email: "a@b.co", username: "bobdev", password: "secret1",
+        isChannel: true, channelLabel: "Acme Jobs", channelDescription: "Curated startup engineering roles.",
+      }).ok,
+    ).toBe(true);
+  });
 });
 
 describe("loginSchema", () => {

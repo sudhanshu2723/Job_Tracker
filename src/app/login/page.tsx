@@ -13,6 +13,9 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [isChannel, setIsChannel] = useState(false);
+  const [channelLabel, setChannelLabel] = useState("");
+  const [channelDescription, setChannelDescription] = useState("");
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -59,10 +62,19 @@ export default function LoginPage() {
     });
   };
 
+  const registerPayload = () => ({
+    email,
+    username,
+    password,
+    isChannel,
+    channelLabel: isChannel ? channelLabel : "",
+    channelDescription: isChannel ? channelDescription : "",
+  });
+
   const doRequestOtp = (e: React.FormEvent) => {
     e.preventDefault();
     run(async () => {
-      await post("/api/auth/register", { email, username, password });
+      await post("/api/auth/register", registerPayload());
       setStep("otp");
       setNotice(`We sent a 6-digit code to ${email}.`);
     });
@@ -79,7 +91,7 @@ export default function LoginPage() {
 
   const resend = () =>
     run(async () => {
-      await post("/api/auth/register", { email, username, password });
+      await post("/api/auth/register", registerPayload());
       setNotice(`New code sent to ${email}.`);
     });
 
@@ -197,6 +209,50 @@ export default function LoginPage() {
                 required
               />
             </div>
+
+            {/* Channel (publisher) signup */}
+            <label className="channel-toggle">
+              <input
+                type="checkbox"
+                checked={isChannel}
+                onChange={(e) => setIsChannel(e.target.checked)}
+              />
+              <span>Sign up as a channel</span>
+            </label>
+            <p className="channel-note">
+              A channel is a job-posting account. Other people can <strong>subscribe</strong> to
+              you, and every job you post is delivered straight into their list. Choose this if you
+              want to <strong>publish jobs</strong> for others to follow — recruiters, communities,
+              or curators.
+            </p>
+
+            {isChannel && (
+              <>
+                <div className="field">
+                  <label htmlFor="r-clabel">Channel name</label>
+                  <input
+                    id="r-clabel"
+                    value={channelLabel}
+                    onChange={(e) => setChannelLabel(e.target.value)}
+                    placeholder="e.g. Bengaluru Frontend Jobs"
+                    maxLength={80}
+                    required
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="r-cdesc">Channel description</label>
+                  <textarea
+                    id="r-cdesc"
+                    value={channelDescription}
+                    onChange={(e) => setChannelDescription(e.target.value)}
+                    placeholder="What kind of jobs will you post? Who is this feed for?"
+                    maxLength={300}
+                    rows={3}
+                    required
+                  />
+                </div>
+              </>
+            )}
             {error && <div className="auth-error">{error}</div>}
             <button className="btn btn-primary" type="submit" disabled={busy} style={{ justifyContent: "center", padding: 11 }}>
               {busy ? "Sending code…" : "Send verification code"}

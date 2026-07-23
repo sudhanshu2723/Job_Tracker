@@ -14,6 +14,10 @@ model User {
   username     String        @unique
   passwordHash String
   createdAt    DateTime      @default(now())
+  // Channel (publisher) accounts: others can subscribe and receive their posted jobs.
+  isChannel          Boolean @default(false)
+  channelLabel       String?
+  channelDescription String?
   applications Application[]
 
   sentInvites     Invitation[] @relation("SentInvites")
@@ -32,6 +36,10 @@ model SignupOtp {
   code         String
   expiresAt    DateTime
   createdAt    DateTime @default(now())
+  // Carried through to User on verification (channel signups).
+  isChannel          Boolean @default(false)
+  channelLabel       String?
+  channelDescription String?
 
   @@map("signup_otps")
 }

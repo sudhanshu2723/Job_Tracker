@@ -25,11 +25,34 @@ export const passwordField = z
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use a valid date.");
 
 // ── Auth ─────────────────────────────────────────────────────────────
-export const registerSchema = z.object({
-  email: emailField,
-  username: usernameField,
-  password: passwordField,
-});
+export const channelLabelField = z.string().trim().max(80);
+export const channelDescriptionField = z.string().trim().max(300);
+
+export const registerSchema = z
+  .object({
+    email: emailField,
+    username: usernameField,
+    password: passwordField,
+    // Optional: register as a subscribable job-posting channel.
+    isChannel: z.boolean().optional().default(false),
+    channelLabel: channelLabelField.optional().default(""),
+    channelDescription: channelDescriptionField.optional().default(""),
+  })
+  .superRefine((v, ctx) => {
+    if (!v.isChannel) return;
+    if (v.channelLabel.trim().length < 2)
+      ctx.addIssue({
+        code: "custom",
+        path: ["channelLabel"],
+        message: "Enter a channel name (at least 2 characters).",
+      });
+    if (v.channelDescription.trim().length < 10)
+      ctx.addIssue({
+        code: "custom",
+        path: ["channelDescription"],
+        message: "Add a short channel description (at least 10 characters).",
+      });
+  });
 
 export const loginSchema = z.object({
   email: emailField,

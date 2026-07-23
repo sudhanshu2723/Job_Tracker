@@ -57,6 +57,17 @@ export const acceptInvite = (id: string) =>
 export const declineInvite = (id: string) =>
   post(`/api/invites/${id}/decline`).then(j<{ ok: true }>);
 
+export type PersonRelationship = "friends" | "outgoing" | "incoming" | "none";
+export interface PersonResult {
+  username: string;
+  relationship: PersonRelationship;
+  friendshipId: string | null;
+}
+export const searchPeople = (q: string) =>
+  fetch(`/api/users/search?q=${encodeURIComponent(q)}`, { cache: "no-store" }).then(
+    j<{ users: PersonResult[] }>,
+  );
+
 export const getFriends = () =>
   fetch("/api/friends", { cache: "no-store" }).then(j<FriendsResponse>);
 export const sendFriendRequest = (toUsername: string) =>

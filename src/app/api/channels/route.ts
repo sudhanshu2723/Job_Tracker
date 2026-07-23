@@ -13,7 +13,25 @@ export async function GET() {
   const me = session.userId;
 
   await warmupDb();
-  const usernames = CHANNEL_META.map((c) => c.username);
+
+  // User-created channels (publisher accounts), plus the built-in feed bots.
+  const userChannels = await prisma.user.findMany({
+    where: { isChannel: true, id: { not: me } },
+    select: { id: true, username: true, channelLabel: true, channelDescription: true },
+  });
+  const metaByName = new Map<string, { username: string; label: string; description: string }>();
+  for (const c of CHANNEL_META) metaByName.set(c.username, c);
+  for (const u of userChannels) {
+    if (metaByName.has(u.username)) continue; // built-in wins on name clash
+    metaByName.set(u.username, {
+      username: u.username,
+      label: u.channelLabel?.trim() || u.username,
+      description: u.channelDescription?.trim() || "A member-run job feed.",
+    });
+  }
+  const channelMeta = [...metaByName.values()];
+
+  const usernames = channelMeta.map((c) => c.username);
   const bots = await prisma.user.findMany({
     where: { username: { in: usernames } },
     select: { id: true, username: true },
@@ -21,7 +39,7 @@ export async function GET() {
   const botByName = new Map(bots.map((b) => [b.username, b]));
   const botIds = bots.map((b) => b.id);
 
-  const [totals, friendships, mine] = await Promise.all([
+  const [totals, friendships, mine, subscribers] = await Promise.all([
     prisma.application.groupBy({
       by: ["userId"],
       where: { userId: { in: botIds } },
@@ -42,10 +60,17 @@ export async function GET() {
       where: { userId: me, sharedFrom: { in: usernames } },
       _count: { _all: true },
     }),
+    // Global subscriber count per bot (a subscribe always makes the bot the addressee).
+    prisma.friendship.groupBy({
+      by: ["addresseeId"],
+      where: { status: "accepted", addresseeId: { in: botIds } },
+      _count: { _all: true },
+    }),
   ]);
 
   const totalByUser = new Map(totals.map((t) => [t.userId, t._count._all]));
   const mineByChannel = new Map(mine.map((m) => [m.sharedFrom, m._count._all]));
+  const subsByBot = new Map(subscribers.map((s) => [s.addresseeId, s._count._all]));
   const botIdSet = new Set(botIds);
   const frByBot = new Map<string, string>();
   for (const f of friendships) {
@@ -53,7 +78,7 @@ export async function GET() {
     frByBot.set(botId, f.id);
   }
 
-  const channels = CHANNEL_META.map((ch) => {
+  const channels = channelMeta.map((ch) => {
     const bot = botByName.get(ch.username);
     const friendshipId = bot ? frByBot.get(bot.id) ?? null : null;
     return {
@@ -64,6 +89,7 @@ export async function GET() {
       subscribed: !!friendshipId,
       friendshipId,
       myCount: mineByChannel.get(ch.username) ?? 0,
+      subscribers: bot ? subsByBot.get(bot.id) ?? 0 : 0,
     };
   });
 

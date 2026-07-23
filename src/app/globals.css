@@ -173,7 +173,7 @@ body {
 
 /* ---------- Layout shell ---------- */
 .app {
-  max-width: 1760px;
+  max-width: none;
   margin: 0 auto;
   padding: 22px 28px 80px;
 }
@@ -442,7 +442,7 @@ body {
 /* ---------- Controls ---------- */
 .controls {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   align-items: center;
   gap: 10px;
   margin-bottom: 12px;
@@ -476,13 +476,17 @@ body {
   cursor: pointer;
 }
 
-/* Action row just above the table: Subscribe (left) · Add application (right) */
+/* Action row just above the table: nav buttons (left) · Add application (right) */
 .table-actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 10px;
   margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.table-actions > :last-child {
+  margin-left: auto;
 }
 
 /* ---------- Table ---------- */
@@ -492,6 +496,8 @@ body {
   border-radius: var(--radius);
   background: var(--surface);
   box-shadow: var(--shadow-sm);
+  /* Always hold a full page's height so the box never shrinks when empty. */
+  min-height: 1080px;
 }
 table.apps {
   width: 100%;
@@ -526,9 +532,8 @@ table.apps {
   color: var(--ink);
 }
 .cell-role {
-  font-size: 12.5px;
+  font-size: 14px;
   color: var(--ink-2);
-  margin-top: 2px;
 }
 .cell-sub {
   font-size: 12px;
@@ -597,6 +602,11 @@ table.apps {
 
 /* ---------- Empty state ---------- */
 .empty {
+  min-height: 1080px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   padding: 54px 20px;
   color: var(--muted);
@@ -682,6 +692,33 @@ table.apps {
 .field textarea {
   resize: vertical;
   min-height: 62px;
+}
+/* Channel (publisher) signup toggle + explainer */
+.channel-toggle {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  margin-top: 2px;
+}
+.channel-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.channel-note {
+  margin: -2px 0 2px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.channel-note strong {
+  color: var(--ink-2);
+  font-weight: 600;
 }
 .check {
   flex-direction: row;
@@ -1041,6 +1078,10 @@ table.apps {
     background: transparent;
     box-shadow: none;
     overflow: visible;
+    min-height: 0;
+  }
+  .empty {
+    min-height: 420px;
   }
   table.apps {
     min-width: 0;
@@ -1160,9 +1201,9 @@ table.apps {
 
 /* ---------- Channels page ---------- */
 .channels-page {
-  max-width: 940px;
+  max-width: none;
   margin: 0 auto;
-  padding: 24px 24px 90px;
+  padding: 24px 32px 90px;
 }
 .channels-head {
   display: flex;
@@ -1191,8 +1232,47 @@ table.apps {
 }
 .channel-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
+}
+@media (max-width: 1000px) {
+  .channel-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 560px) {
+  .channel-grid {
+    grid-template-columns: 1fr;
+  }
+}
+/* Available-feeds header: title on the left, search on the right */
+.channels-right-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.channels-right-head h2 {
+  margin: 0;
+}
+.channels-search {
+  flex: 0 1 260px;
+  min-width: 180px;
+}
+/* Neutral subscriber-count pill (distinct from the green "subscribed" badge) */
+.count-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+  padding: 3px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
 }
 .channel-card {
   background: var(--surface);
@@ -1203,6 +1283,114 @@ table.apps {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+/* ---------- Friends page ---------- */
+.friends-wrap {
+  max-width: 2060px;
+  margin: 0 auto;
+  padding: 24px 24px 90px;
+}
+.fr-section {
+  margin-top: 30px;
+}
+/* Three equal columns: Find people · Your friends · Requests sent */
+.fr-columns {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 44px;
+  align-items: start;
+  margin-top: 26px;
+}
+.fr-col {
+  min-width: 0; /* let rows shrink so long names ellipsize */
+}
+@media (max-width: 860px) {
+  .fr-columns {
+    grid-template-columns: 1fr;
+    gap: 26px;
+  }
+}
+.fr-heading {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-2);
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+.fr-search {
+  width: 100%;
+  margin-bottom: 14px;
+}
+.person-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.person-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.person-row:last-child {
+  border-bottom: none;
+}
+.person-row:hover {
+  background: var(--surface-2);
+}
+.person-avatar {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.person-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.person-row-action {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.person-row-action .btn {
+  padding: 6px 14px;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+.person-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--good);
+  background: color-mix(in srgb, var(--good) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--good) 30%, transparent);
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
 }
 .channel-top {
   display: flex;
@@ -1259,7 +1447,7 @@ table.apps {
 /* Two-column: subscribed (left, compact) · available (right, cards) */
 .channels-layout {
   display: grid;
-  grid-template-columns: minmax(230px, 320px) 1fr;
+  grid-template-columns: minmax(220px, 280px) 1fr;
   gap: 24px;
   align-items: start;
   margin-top: 14px;

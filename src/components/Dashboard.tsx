@@ -423,6 +423,9 @@ export default function Dashboard({ username }: { username: string }) {
         <button className="btn" onClick={() => router.push("/channels")}>
           <IconUsers width={15} height={15} /> Subscribe to feeds
         </button>
+        <button className="btn" onClick={() => router.push("/friends")}>
+          <IconUsers width={15} height={15} /> Friends
+        </button>
         <button
           className="btn btn-primary"
           onClick={() => {
@@ -449,7 +452,9 @@ export default function Dashboard({ username }: { username: string }) {
           <table className="apps">
             <thead>
               <tr>
-                <th>Company / Role</th>
+                <th>Company</th>
+                <th>Role</th>
+                <th>Shared by</th>
                 <th>Country</th>
                 <th>Applied</th>
                 <th>Fetched</th>
@@ -457,22 +462,26 @@ export default function Dashboard({ username }: { username: string }) {
                 <th>Status</th>
                 <th>Follow-up</th>
                 <th>Link</th>
-                <th aria-label="Actions" />
+                <th>Edit / Delete</th>
               </tr>
             </thead>
             <tbody>
               {paged.map((a) => (
                 <tr key={a.id}>
-                  <td>
+                  <td data-label="Company">
                     <div className="cell-company">{a.company}</div>
-                    <div className="cell-role">
-                      {a.role}
-                      {a.sharedFrom && (
-                        <span className="badge-shared" title={`Shared by ${a.sharedFrom}`}>
-                          · via {a.sharedFrom}
-                        </span>
-                      )}
-                    </div>
+                  </td>
+                  <td data-label="Role">
+                    <div className="cell-role">{a.role}</div>
+                  </td>
+                  <td data-label="Shared by">
+                    {a.sharedFrom ? (
+                      <span className="badge-shared" title={`Shared by ${a.sharedFrom}`}>
+                        {a.sharedFrom}
+                      </span>
+                    ) : (
+                      <span className="cell-sub">You</span>
+                    )}
                   </td>
                   <td data-label="Country">
                     <div>{a.country || "—"}</div>

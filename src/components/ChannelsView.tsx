@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { sendFriendRequest, removeFriend } from "@/lib/social";
 import { useToast } from "./Toast";
 import { Spinner } from "./Spinner";
-import { IconArrowLeft, IconPlus } from "./icons";
+import { IconArrowLeft, IconPlus, IconSearch, IconUsers } from "./icons";
 
 interface ChannelStat {
   username: string;
@@ -15,6 +15,7 @@ interface ChannelStat {
   subscribed: boolean;
   friendshipId: string | null;
   myCount: number;
+  subscribers: number;
 }
 
 export default function ChannelsView({ username }: { username: string }) {
@@ -23,6 +24,7 @@ export default function ChannelsView({ username }: { username: string }) {
   const [channels, setChannels] = useState<ChannelStat[] | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   const reload = useCallback(async () => {
     try {
@@ -69,7 +71,20 @@ export default function ChannelsView({ username }: { username: string }) {
   }
 
   const subscribed = (channels ?? []).filter((c) => c.subscribed);
-  const available = (channels ?? []).filter((c) => !c.subscribed);
+  const available = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return (channels ?? [])
+      .filter((c) => !c.subscribed)
+      .filter(
+        (c) =>
+          !q ||
+          c.label.toLowerCase().includes(q) ||
+          c.description.toLowerCase().includes(q),
+      )
+      // Most-subscribed feeds first; ties broken alphabetically.
+      .sort((a, b) => b.subscribers - a.subscribers || a.label.localeCompare(b.label));
+  }, [channels, search]);
+  const availableTotal = (channels ?? []).filter((c) => !c.subscribed).length;
 
   return (
     <div className="channels-page">
@@ -123,15 +138,35 @@ export default function ChannelsView({ username }: { username: string }) {
 
           {/* Right: available feeds — big subscribe cards */}
           <main className="channels-right">
-            <h2>Available feeds ({available.length})</h2>
-            {available.length === 0 ? (
+            <div className="channels-right-head">
+              <h2>Available feeds ({availableTotal})</h2>
+              <div className="search channels-search">
+                <IconSearch style={{ color: "var(--muted)", flex: "none" }} />
+                <input
+                  placeholder="Search feeds…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  aria-label="Search available feeds"
+                />
+              </div>
+            </div>
+            {availableTotal === 0 ? (
               <div className="empty-mini">You&apos;re subscribed to every feed. 🎉</div>
+            ) : available.length === 0 ? (
+              <div className="empty-mini">No feeds match “{search}”.</div>
             ) : (
               <div className="channel-grid">
                 {available.map((ch) => (
                   <div className="channel-card" key={ch.username}>
                     <div className="channel-top">
                       <h3>{ch.label}</h3>
+                      <span
+                        className="count-badge"
+                        title={`${ch.subscribers} subscriber${ch.subscribers === 1 ? "" : "s"}`}
+                      >
+                        <IconUsers width={12} height={12} />
+                        {ch.subscribers}
+                      </span>
                     </div>
                     <p className="desc">{ch.description}</p>
                     <div className="channel-stat">

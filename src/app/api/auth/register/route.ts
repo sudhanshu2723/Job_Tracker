@@ -19,7 +19,7 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   const parsed = parseBody(registerSchema, body);
   if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
-  const { email, username, password } = parsed.data;
+  const { email, username, password, isChannel, channelLabel, channelDescription } = parsed.data;
 
   // Reserved feed/bot usernames can never be registered (prevents channel squatting).
   if (CHANNEL_USERNAMES.has(username)) {
@@ -42,10 +42,15 @@ export async function POST(req: Request) {
   const passwordHash = await hashPassword(password);
   const expiresAt = new Date(Date.now() + OTP_TTL_MS);
 
+  const channelFields = {
+    isChannel,
+    channelLabel: isChannel ? channelLabel.trim() : null,
+    channelDescription: isChannel ? channelDescription.trim() : null,
+  };
   await prisma.signupOtp.upsert({
     where: { email },
-    create: { email, username, passwordHash, code: hashOtp(code), expiresAt },
-    update: { username, passwordHash, code: hashOtp(code), expiresAt },
+    create: { email, username, passwordHash, code: hashOtp(code), expiresAt, ...channelFields },
+    update: { username, passwordHash, code: hashOtp(code), expiresAt, ...channelFields },
   });
 
   await sendOtp(email, code);

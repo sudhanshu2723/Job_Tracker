@@ -64,16 +64,21 @@ export async function POST(req: Request) {
 
   await warmupDb();
 
-  // Subscribing to a channel feed: the bot auto-accepts + backfills.
-  const isBot = CHANNEL_USERNAMES.has(toUsername);
-  if (isBot) await ensureBotUser(toUsername);
+  // Subscribing to a channel feed: it auto-accepts + backfills. A channel is
+  // either a built-in feed bot or a user who registered as a channel.
+  const isStaticBot = CHANNEL_USERNAMES.has(toUsername);
+  if (isStaticBot) await ensureBotUser(toUsername);
 
-  const other = await prisma.user.findUnique({ where: { username: toUsername } });
+  const other = await prisma.user.findUnique({
+    where: { username: toUsername },
+    select: { id: true, username: true, isChannel: true },
+  });
   if (!other) return NextResponse.json({ error: "No user with that username." }, { status: 404 });
   if (other.id === session.userId)
     return NextResponse.json({ error: "You can't friend yourself." }, { status: 400 });
 
-  if (isBot) {
+  const isChannel = isStaticBot || other.isChannel;
+  if (isChannel) {
     const prior = await existingFriendship(session.userId, other.id);
     if (prior?.status === "accepted")
       return NextResponse.json({ error: "You're already subscribed." }, { status: 409 });
