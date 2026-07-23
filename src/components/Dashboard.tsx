@@ -26,6 +26,7 @@ import {
   apiReplace,
 } from "@/lib/api";
 import { computeKpis, countByStatus, daysAgo, isFollowUpDue } from "@/lib/stats";
+import { matchesLevel } from "@/lib/level";
 import { ApplicationForm } from "./ApplicationForm";
 import {
   IconPlus,
@@ -58,6 +59,7 @@ export default function Dashboard({ username }: { username: string }) {
   const [statusFilter, setStatusFilter] = useState<StatusKey | "all">("all");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [countryFilter, setCountryFilter] = useState<string>("all");
+  const [levelFilter, setLevelFilter] = useState<"all" | "fresher" | "experienced">("all");
   const [refFilter, setRefFilter] = useState<"all" | "yes" | "no">("all");
   const [sort, setSort] = useState<SortKey>("recent");
 
@@ -211,6 +213,7 @@ export default function Dashboard({ username }: { username: string }) {
       if (statusFilter !== "all" && a.status !== statusFilter) return false;
       if (sourceFilter !== "all" && a.source !== sourceFilter) return false;
       if (countryFilter !== "all" && a.country !== countryFilter) return false;
+      if (!matchesLevel(a.role, levelFilter)) return false;
       if (refFilter === "yes" && !a.referral) return false;
       if (refFilter === "no" && a.referral) return false;
       if (q) {
@@ -232,7 +235,7 @@ export default function Dashboard({ username }: { username: string }) {
       }
     });
     return list;
-  }, [apps, search, statusFilter, sourceFilter, countryFilter, refFilter, sort]);
+  }, [apps, search, statusFilter, sourceFilter, countryFilter, levelFilter, refFilter, sort]);
 
   if (!loaded) {
     return <div className="app" aria-busy="true" />;
@@ -412,6 +415,16 @@ export default function Dashboard({ username }: { username: string }) {
               {c}
             </option>
           ))}
+        </select>
+        <select
+          className="select"
+          value={levelFilter}
+          onChange={(e) => setLevelFilter(e.target.value as "all" | "fresher" | "experienced")}
+          aria-label="Filter by experience level"
+        >
+          <option value="all">All levels</option>
+          <option value="fresher">Fresher / entry</option>
+          <option value="experienced">Experienced / senior</option>
         </select>
         <select
           className="select"
