@@ -7,6 +7,7 @@ import {
   type Application,
   type ApplicationDraft,
 } from "@/lib/types";
+import { COUNTRIES } from "@/lib/countries";
 import { today } from "@/lib/storage";
 import { IconClose } from "./icons";
 
@@ -15,6 +16,7 @@ function emptyDraft(): ApplicationDraft {
     company: "",
     role: "",
     location: "",
+    country: "",
     source: "LinkedIn",
     dateApplied: today(),
     referral: false,
@@ -121,8 +123,24 @@ export function ApplicationForm({ initial, onSave, onClose }: Props) {
                 id="location"
                 value={draft.location}
                 onChange={(e) => set("location", e.target.value)}
-                placeholder="Bengaluru, India"
+                placeholder="Bengaluru"
               />
+            </div>
+
+            <div className="field">
+              <label htmlFor="country">Country</label>
+              <input
+                id="country"
+                list="country-list"
+                value={draft.country}
+                onChange={(e) => set("country", e.target.value)}
+                placeholder="India"
+              />
+              <datalist id="country-list">
+                {COUNTRIES.map((c) => (
+                  <option value={c} key={c} />
+                ))}
+              </datalist>
             </div>
 
             <div className="field">

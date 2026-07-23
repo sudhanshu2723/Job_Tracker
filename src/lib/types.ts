@@ -56,6 +56,7 @@ export interface ApplicationDraft {
   company: string;
   role: string;
   location: string;
+  country: string;
   source: string;
   /** ISO date string, YYYY-MM-DD. */
   dateApplied: string;

@@ -57,6 +57,7 @@ export default function Dashboard({ username }: { username: string }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusKey | "all">("all");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
+  const [countryFilter, setCountryFilter] = useState<string>("all");
   const [refFilter, setRefFilter] = useState<"all" | "yes" | "no">("all");
   const [sort, setSort] = useState<SortKey>("recent");
 
@@ -199,11 +200,17 @@ export default function Dashboard({ username }: { username: string }) {
     [apps],
   );
 
+  const countries = useMemo(
+    () => [...new Set(apps.map((a) => a.country).filter(Boolean))].sort(),
+    [apps],
+  );
+
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
     let list = apps.filter((a) => {
       if (statusFilter !== "all" && a.status !== statusFilter) return false;
       if (sourceFilter !== "all" && a.source !== sourceFilter) return false;
+      if (countryFilter !== "all" && a.country !== countryFilter) return false;
       if (refFilter === "yes" && !a.referral) return false;
       if (refFilter === "no" && a.referral) return false;
       if (q) {
@@ -225,7 +232,7 @@ export default function Dashboard({ username }: { username: string }) {
       }
     });
     return list;
-  }, [apps, search, statusFilter, sourceFilter, refFilter, sort]);
+  }, [apps, search, statusFilter, sourceFilter, countryFilter, refFilter, sort]);
 
   if (!loaded) {
     return <div className="app" aria-busy="true" />;
@@ -395,6 +402,19 @@ export default function Dashboard({ username }: { username: string }) {
         </select>
         <select
           className="select"
+          value={countryFilter}
+          onChange={(e) => setCountryFilter(e.target.value)}
+          aria-label="Filter by country"
+        >
+          <option value="all">All countries</option>
+          {countries.map((c) => (
+            <option value={c} key={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+        <select
+          className="select"
           value={refFilter}
           onChange={(e) => setRefFilter(e.target.value as "all" | "yes" | "no")}
           aria-label="Filter by referral"
@@ -433,6 +453,7 @@ export default function Dashboard({ username }: { username: string }) {
               <tr>
                 <th>Company / Role</th>
                 <th>Source</th>
+                <th>Country</th>
                 <th>Applied</th>
                 <th>Referral</th>
                 <th>Status</th>
@@ -459,6 +480,7 @@ export default function Dashboard({ username }: { username: string }) {
                     <div>{a.source || "—"}</div>
                     {a.location && <div className="cell-sub">{a.location}</div>}
                   </td>
+                  <td>{a.country ? a.country : <span className="cell-sub">—</span>}</td>
                   <td className="tnum">
                     {a.dateApplied ? (
                       <>

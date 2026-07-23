@@ -8,6 +8,7 @@ type ShareSource = {
   role: string;
   link: string;
   location: string;
+  country: string;
 };
 
 const SHARE_PICK = {
@@ -16,6 +17,7 @@ const SHARE_PICK = {
   role: true,
   link: true,
   location: true,
+  country: true,
 } as const;
 
 function copyData(app: ShareSource, targetUserId: string, sharedFrom: string) {
@@ -25,6 +27,7 @@ function copyData(app: ShareSource, targetUserId: string, sharedFrom: string) {
     role: app.role,
     link: app.link,
     location: app.location,
+    country: app.country,
     source: "",
     dateApplied: "",
     referral: false,

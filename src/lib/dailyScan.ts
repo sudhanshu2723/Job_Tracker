@@ -4,6 +4,7 @@ import { scanJobSpy } from "./jobspyScanner";
 import { JOBSPY } from "./portals";
 import { ensureBotUser } from "./bot";
 import { fanoutManyToFriends } from "./sharing";
+import { deriveCountry } from "./countries";
 
 export interface DailyScanSummary {
   scannedCompanies: number;
@@ -78,6 +79,7 @@ export async function runDailyScan(): Promise<DailyScanSummary> {
       role: j.role,
       link: j.link,
       location: j.location,
+      country: deriveCountry(j.location),
       status: "wishlist",
       source: "career-ops scan",
     })),
@@ -86,7 +88,7 @@ export async function runDailyScan(): Promise<DailyScanSummary> {
 
   const added = await prisma.application.findMany({
     where: { userId: bot.id, link: { in: fresh.map((j) => j.link) } },
-    select: { id: true, company: true, role: true, link: true, location: true },
+    select: { id: true, company: true, role: true, link: true, location: true, country: true },
   });
 
   const syncedCopies = await fanoutManyToFriends(bot.id, bot.username, added);

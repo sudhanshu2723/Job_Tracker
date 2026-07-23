@@ -30,6 +30,7 @@ model Application {
   company     String
   role        String
   location    String   @default("")
+  country     String   @default("")
   source      String   @default("")
   dateApplied String   @default("")
   referral    Boolean  @default(false)
