@@ -57,6 +57,12 @@ export const CHANNEL_META: ChannelMeta[] = [
     label: "We Work Remotely",
     description: "Remote programming roles from the WeWorkRemotely RSS feed (all levels).",
   },
+  {
+    username: "glassdoor",
+    label: "Glassdoor (scraper)",
+    description:
+      "Jobs from Glassdoor via jobspy-js. Local-only scraper — runs when ENABLE_JOBSPY is on.",
+  },
 ];
 
 export const CHANNEL_USERNAMES = new Set(CHANNEL_META.map((c) => c.username));

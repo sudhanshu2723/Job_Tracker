@@ -12,6 +12,7 @@
   "dependencies": {
     "@prisma/client": "^6.19.3",
     "bcryptjs": "^3.0.3",
+    "jobspy-js": "^1.7.0",
     "jose": "^6.2.3",
     "next": "16.2.11",
     "react": "19.2.4",
