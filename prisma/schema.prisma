@@ -10,6 +10,7 @@ datasource db {
 
 model User {
   id           String        @id @default(cuid())
+  email        String?       @unique
   username     String        @unique
   passwordHash String
   createdAt    DateTime      @default(now())
@@ -21,6 +22,18 @@ model User {
   recvFriendReqs  Friendship[] @relation("RecvFriendReqs")
 
   @@map("users")
+}
+
+// Pending signup awaiting email OTP verification (one per email).
+model SignupOtp {
+  email        String   @id
+  username     String
+  passwordHash String
+  code         String
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  @@map("signup_otps")
 }
 
 model Application {

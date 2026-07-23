@@ -9,17 +9,18 @@ import {
 
 export const runtime = "nodejs";
 
+// POST /api/auth/login — email + password
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
-  const username = String(body?.username ?? "").trim().toLowerCase();
+  const email = String(body?.email ?? "").trim().toLowerCase();
   const password = String(body?.password ?? "");
 
   const invalid = () =>
-    NextResponse.json({ error: "Invalid username or password." }, { status: 401 });
+    NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
 
-  if (!username || !password) return invalid();
+  if (!email || !password) return invalid();
 
-  const user = await prisma.user.findUnique({ where: { username } });
+  const user = await prisma.user.findUnique({ where: { email } });
   if (!user) return invalid();
 
   const ok = await verifyPassword(password, user.passwordHash);
