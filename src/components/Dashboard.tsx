@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   STATUSES,
@@ -27,23 +27,12 @@ import {
   IconUsers,
 } from "./icons";
 import { PeoplePanel } from "./PeoplePanel";
+import { Pager } from "./Pager";
 import { getInvites, getFriends } from "@/lib/social";
+import { useToast } from "./Toast";
+import { Spinner } from "./Spinner";
 
 const PAGE_SIZE = 20;
-
-/** Compact page list with ellipses, e.g. 1 … 4 5 6 … 20. */
-function pageNumbers(current: number, total: number): (number | "…")[] {
-  const set = new Set<number>([1, total, current, current - 1, current + 1]);
-  const arr = [...set].filter((p) => p >= 1 && p <= total).sort((a, b) => a - b);
-  const out: (number | "…")[] = [];
-  let prev = 0;
-  for (const p of arr) {
-    if (p - prev > 1) out.push("…");
-    out.push(p);
-    prev = p;
-  }
-  return out;
-}
 
 type SortKey = "fetched" | "fetchedOld" | "recent" | "oldest" | "company" | "followup";
 type FetchedFilter = "all" | "24h" | "7d" | "30d";
@@ -56,14 +45,17 @@ type Theme = "light" | "dark";
 
 export default function Dashboard({ username }: { username: string }) {
   const router = useRouter();
+  const toast = useToast();
   const [apps, setApps] = useState<Application[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [theme, setTheme] = useState<Theme | null>(null);
 
   const [search, setSearch] = useState("");
+  // Keep the input instant while the (potentially large) filter runs on a
+  // deferred value — React's native equivalent of debouncing client-side work.
+  const deferredSearch = useDeferredValue(search);
   const [statusFilter, setStatusFilter] = useState<StatusKey | "all">("all");
-  const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [countryFilter, setCountryFilter] = useState<string>("all");
   const [levelFilter, setLevelFilter] = useState<"all" | "fresher" | "experienced">("all");
   const [refFilter, setRefFilter] = useState<"all" | "yes" | "no">("all");
@@ -121,6 +113,7 @@ export default function Dashboard({ username }: { username: string }) {
 
   // ---- CRUD (persists to the database) ----
   async function upsert(draft: ApplicationDraft) {
+    const isEdit = !!editing;
     try {
       if (editing) {
         const row = await apiUpdate(editing.id, draft);
@@ -131,8 +124,9 @@ export default function Dashboard({ username }: { username: string }) {
       }
       setModalOpen(false);
       setEditing(null);
+      toast(isEdit ? "Application updated" : "Application added", "success");
     } catch {
-      alert("Save failed — the database didn't accept the change.");
+      toast("Save failed — please try again.", "error");
     }
   }
 
@@ -143,9 +137,10 @@ export default function Dashboard({ username }: { username: string }) {
     setApps((list) => list.filter((a) => a.id !== id));
     try {
       await apiDelete(id);
+      toast("Application deleted", "success");
     } catch {
       setApps(prev);
-      alert("Delete failed.");
+      toast("Delete failed.", "error");
     }
   }
 
@@ -160,7 +155,7 @@ export default function Dashboard({ username }: { username: string }) {
       await apiUpdate(id, draft);
     } catch {
       setApps(prev);
-      alert("Couldn't update status.");
+      toast("Couldn't update status.", "error");
     }
   }
 
@@ -170,9 +165,10 @@ export default function Dashboard({ username }: { username: string }) {
     setApps([]);
     try {
       await apiClear();
+      toast("All applications cleared", "success");
     } catch {
       setApps(prev);
-      alert("Clear failed.");
+      toast("Clear failed.", "error");
     }
   }
 
@@ -180,21 +176,15 @@ export default function Dashboard({ username }: { username: string }) {
   const kpis = useMemo(() => computeKpis(apps, today), [apps, today]);
   const statusCounts = useMemo(() => countByStatus(apps), [apps]);
 
-  const sources = useMemo(
-    () => [...new Set(apps.map((a) => a.source).filter(Boolean))].sort(),
-    [apps],
-  );
-
   const countries = useMemo(
     () => [...new Set(apps.map((a) => a.country).filter(Boolean))].sort(),
     [apps],
   );
 
   const visible = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = deferredSearch.trim().toLowerCase();
     let list = apps.filter((a) => {
       if (statusFilter !== "all" && a.status !== statusFilter) return false;
-      if (sourceFilter !== "all" && a.source !== sourceFilter) return false;
       if (countryFilter !== "all" && a.country !== countryFilter) return false;
       if (!matchesLevel(a.role, levelFilter)) return false;
       if (refFilter === "yes" && !a.referral) return false;
@@ -226,19 +216,23 @@ export default function Dashboard({ username }: { username: string }) {
       }
     });
     return list;
-  }, [apps, search, statusFilter, sourceFilter, countryFilter, levelFilter, refFilter, fetchedFilter, sort]);
+  }, [apps, deferredSearch, statusFilter, countryFilter, levelFilter, refFilter, fetchedFilter, sort]);
 
   // Reset to page 1 whenever the filtered result set changes.
   useEffect(() => {
     setPage(1);
-  }, [search, statusFilter, sourceFilter, countryFilter, levelFilter, refFilter, fetchedFilter, sort]);
+  }, [deferredSearch, statusFilter, countryFilter, levelFilter, refFilter, fetchedFilter, sort]);
 
   const totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const paged = visible.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   if (!loaded) {
-    return <div className="app" aria-busy="true" />;
+    return (
+      <div className="app">
+        <Spinner label="Loading your applications…" full />
+      </div>
+    );
   }
 
   return (
@@ -367,19 +361,6 @@ export default function Dashboard({ username }: { username: string }) {
         </select>
         <select
           className="select"
-          value={sourceFilter}
-          onChange={(e) => setSourceFilter(e.target.value)}
-          aria-label="Filter by source"
-        >
-          <option value="all">All sources</option>
-          {sources.map((s) => (
-            <option value={s} key={s}>
-              {s}
-            </option>
-          ))}
-        </select>
-        <select
-          className="select"
           value={countryFilter}
           onChange={(e) => setCountryFilter(e.target.value)}
           aria-label="Filter by country"
@@ -469,7 +450,6 @@ export default function Dashboard({ username }: { username: string }) {
             <thead>
               <tr>
                 <th>Company / Role</th>
-                <th>Source</th>
                 <th>Country</th>
                 <th>Applied</th>
                 <th>Fetched</th>
@@ -494,12 +474,9 @@ export default function Dashboard({ username }: { username: string }) {
                       )}
                     </div>
                   </td>
-                  <td data-label="Source">
-                    <div>{a.source || "—"}</div>
-                    {a.location && <div className="cell-sub">{a.location}</div>}
-                  </td>
                   <td data-label="Country">
-                    {a.country ? a.country : <span className="cell-sub">—</span>}
+                    <div>{a.country || "—"}</div>
+                    {a.location && <div className="cell-sub">{a.location}</div>}
                   </td>
                   <td className="tnum" data-label="Applied">
                     {a.dateApplied ? (
@@ -514,8 +491,8 @@ export default function Dashboard({ username }: { username: string }) {
                   <td className="tnum" data-label="Fetched">
                     {a.createdAt ? (
                       <>
-                        <div>{formatDate(a.createdAt.slice(0, 10))}</div>
-                        <div className="cell-sub">{agoLabel(a.createdAt.slice(0, 10), today)}</div>
+                        <div>{fetchedAgo(a.createdAt)}</div>
+                        <div className="cell-sub">{formatDate(a.createdAt.slice(0, 10))}</div>
                       </>
                     ) : (
                       <span className="cell-sub">—</span>
@@ -555,7 +532,7 @@ export default function Dashboard({ username }: { username: string }) {
                     )}
                   </td>
                   <td data-label="Link">
-                    {a.link ? (
+                    {a.link && /^https?:\/\//i.test(a.link) ? (
                       <a
                         className="open-link"
                         href={a.link}
@@ -600,52 +577,18 @@ export default function Dashboard({ username }: { username: string }) {
         )}
       </div>
 
-      {visible.length > 0 && (
-        <div className="pager">
-          <span className="pager-info">
-            {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, visible.length)} of{" "}
-            {visible.length}
-          </span>
-          {totalPages > 1 && (
-            <>
-              <button
-                className="btn"
-                disabled={safePage === 1}
-                onClick={() => setPage(safePage - 1)}
-              >
-                Prev
-              </button>
-              {pageNumbers(safePage, totalPages).map((p, i) =>
-                p === "…" ? (
-                  <span className="pager-ellipsis" key={`e${i}`}>
-                    …
-                  </span>
-                ) : (
-                  <button
-                    key={p}
-                    className={`btn pager-num${p === safePage ? " active" : ""}`}
-                    onClick={() => setPage(p)}
-                  >
-                    {p}
-                  </button>
-                ),
-              )}
-              <button
-                className="btn"
-                disabled={safePage === totalPages}
-                onClick={() => setPage(safePage + 1)}
-              >
-                Next
-              </button>
-            </>
-          )}
-        </div>
-      )}
+      <Pager
+        page={safePage}
+        totalPages={totalPages}
+        pageSize={PAGE_SIZE}
+        totalItems={visible.length}
+        onPage={setPage}
+      />
 
       <div className="hint">
         <IconBell width={13} height={13} />
-        Data is saved privately in this browser. Use{" "}
-        <strong style={{ color: "var(--ink-2)" }}>Export JSON</strong> for a backup.
+        Your applications are saved privately to your account and synced across
+        your devices.
         {apps.length > 0 && (
           <button
             className="btn btn-ghost btn-danger"
@@ -715,4 +658,19 @@ function agoLabel(iso: string, today: string): string {
   if (n < 30) return `${n} days ago`;
   const w = Math.round(n / 7);
   return `${w} weeks ago`;
+}
+
+/** Relative time from a full ISO timestamp: "just now", "5 min ago", "3 hrs ago", "2 days ago". */
+function fetchedAgo(iso: string): string {
+  const then = Date.parse(iso);
+  if (Number.isNaN(then)) return "";
+  const mins = Math.floor((Date.now() - then) / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs} hr${hrs === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return `${days} day${days === 1 ? "" : "s"} ago`;
+  const wks = Math.floor(days / 7);
+  return `${wks} wk${wks === 1 ? "" : "s"} ago`;
 }

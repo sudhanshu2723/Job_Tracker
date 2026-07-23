@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma, warmupDb } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { enforceRateLimit } from "@/lib/rateLimit";
+import { parseBody, inviteSchema } from "@/lib/validation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,21 +49,29 @@ export async function POST(req: Request) {
   const session = await getSession();
   if (!session) return unauthorized();
 
-  const body = await req.json().catch(() => null);
-  const toUsername = String(body?.toUsername ?? "").trim().toLowerCase();
-  const fromDate = String(body?.fromDate ?? "");
-  const toDate = String(body?.toDate ?? "");
+  const limited = await enforceRateLimit(req, "invite-send", 20, 60, session.userId);
+  if (limited) return limited;
 
-  if (!toUsername) return NextResponse.json({ error: "Enter a username." }, { status: 400 });
-  if (!fromDate || !toDate)
-    return NextResponse.json({ error: "Pick a start and end date." }, { status: 400 });
+  const body = await req.json().catch(() => null);
+  const parsed = parseBody(inviteSchema, body);
+  if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
+  const { toUsername, fromDate, toDate } = parsed.data;
   if (fromDate > toDate)
     return NextResponse.json({ error: "Start date must be before end date." }, { status: 400 });
 
+  await warmupDb();
   const toUser = await prisma.user.findUnique({ where: { username: toUsername } });
   if (!toUser) return NextResponse.json({ error: "No user with that username." }, { status: 404 });
   if (toUser.id === session.userId)
     return NextResponse.json({ error: "You can't invite yourself." }, { status: 400 });
+
+  // Dedup: one pending invite per recipient at a time (anti-spam).
+  const pending = await prisma.invitation.findFirst({
+    where: { fromUserId: session.userId, toUserId: toUser.id, status: "pending" },
+    select: { id: true },
+  });
+  if (pending)
+    return NextResponse.json({ error: "You already have a pending invite to them." }, { status: 409 });
 
   await prisma.invitation.create({
     data: { fromUserId: session.userId, toUserId: toUser.id, fromDate, toDate },

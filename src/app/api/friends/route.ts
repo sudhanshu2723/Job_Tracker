@@ -4,6 +4,8 @@ import { getSession } from "@/lib/auth";
 import { existingFriendship, acceptFriendship, shareOwnAppsToUser } from "@/lib/sharing";
 import { ensureBotUser } from "@/lib/bot";
 import { CHANNEL_USERNAMES } from "@/lib/channelsMeta";
+import { enforceRateLimit } from "@/lib/rateLimit";
+import { parseBody, friendSchema } from "@/lib/validation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -52,9 +54,15 @@ export async function POST(req: Request) {
   const session = await getSession();
   if (!session) return unauthorized();
 
+  const limited = await enforceRateLimit(req, "friend-req", 30, 60, session.userId);
+  if (limited) return limited;
+
   const body = await req.json().catch(() => null);
-  const toUsername = String(body?.toUsername ?? "").trim().toLowerCase();
-  if (!toUsername) return NextResponse.json({ error: "Enter a username." }, { status: 400 });
+  const parsed = parseBody(friendSchema, body);
+  if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
+  const toUsername = parsed.data.toUsername;
+
+  await warmupDb();
 
   // Subscribing to a channel feed: the bot auto-accepts + backfills.
   const isBot = CHANNEL_USERNAMES.has(toUsername);
@@ -92,8 +100,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Request already sent." }, { status: 409 });
   }
 
-  await prisma.friendship.create({
-    data: { requesterId: session.userId, addresseeId: other.id },
-  });
+  try {
+    await prisma.friendship.create({
+      data: { requesterId: session.userId, addresseeId: other.id },
+    });
+  } catch {
+    // Concurrent duplicate request — unique constraint tripped.
+    return NextResponse.json({ error: "Request already sent." }, { status: 409 });
+  }
   return NextResponse.json({ ok: true }, { status: 201 });
 }

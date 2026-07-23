@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { sendFriendRequest, removeFriend } from "@/lib/social";
-import { IconArrowLeft, IconCheck, IconPlus, IconBell, IconClose } from "./icons";
+import { useToast } from "./Toast";
+import { Spinner } from "./Spinner";
+import { IconArrowLeft, IconPlus } from "./icons";
 
 interface ChannelStat {
   username: string;
@@ -15,18 +17,12 @@ interface ChannelStat {
   myCount: number;
 }
 
-interface Toast {
-  id: number;
-  text: string;
-  tone: "info" | "success" | "error";
-}
-
 export default function ChannelsView({ username }: { username: string }) {
   const router = useRouter();
+  const toast = useToast();
   const [channels, setChannels] = useState<ChannelStat[] | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
-  const [toasts, setToasts] = useState<Toast[]>([]);
 
   const reload = useCallback(async () => {
     try {
@@ -43,21 +39,15 @@ export default function ChannelsView({ username }: { username: string }) {
     reload();
   }, [reload]);
 
-  function addToast(text: string, tone: Toast["tone"] = "info") {
-    const id = Date.now() + Math.random();
-    setToasts((t) => [...t, { id, text, tone }]);
-    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3200);
-  }
-
   async function subscribe(ch: ChannelStat) {
     setBusy(ch.username);
-    addToast(`Subscribing to ${ch.label}…`, "info");
+    toast(`Subscribing to ${ch.label}…`, "info");
     try {
       await sendFriendRequest(ch.username);
-      addToast(`Subscribed to ${ch.label}`, "success");
+      toast(`Subscribed to ${ch.label}`, "success");
       await reload();
     } catch (e) {
-      addToast(e instanceof Error ? e.message : "Subscribe failed", "error");
+      toast(e instanceof Error ? e.message : "Subscribe failed", "error");
     } finally {
       setBusy(null);
     }
@@ -66,13 +56,13 @@ export default function ChannelsView({ username }: { username: string }) {
   async function unsubscribe(ch: ChannelStat) {
     if (!ch.friendshipId) return;
     setBusy(ch.username);
-    addToast(`Unsubscribing from ${ch.label}…`, "info");
+    toast(`Unsubscribing from ${ch.label}…`, "info");
     try {
       await removeFriend(ch.friendshipId);
-      addToast(`Unsubscribed from ${ch.label}`, "success");
+      toast(`Unsubscribed from ${ch.label}`, "success");
       await reload();
     } catch {
-      addToast("Unsubscribe failed", "error");
+      toast("Unsubscribe failed", "error");
     } finally {
       setBusy(null);
     }
@@ -84,7 +74,12 @@ export default function ChannelsView({ username }: { username: string }) {
   return (
     <div className="channels-page">
       <header className="channels-head">
-        <button className="btn btn-icon btn-ghost" onClick={() => router.push("/")} aria-label="Back to dashboard" title="Back to dashboard">
+        <button
+          className="btn btn-icon btn-ghost"
+          onClick={() => router.push("/")}
+          aria-label="Back to dashboard"
+          title="Back to dashboard"
+        >
           <IconArrowLeft />
         </button>
         <div>
@@ -94,7 +89,7 @@ export default function ChannelsView({ username }: { username: string }) {
       </header>
 
       {error && <div className="auth-error">{error}</div>}
-      {!channels && !error && <div className="empty-mini">Loading feeds…</div>}
+      {!channels && !error && <Spinner label="Loading feeds…" full />}
 
       {channels && (
         <div className="channels-layout">
@@ -114,13 +109,11 @@ export default function ChannelsView({ username }: { username: string }) {
                       </div>
                     </div>
                     <button
-                      className="btn btn-icon btn-ghost btn-danger"
-                      title={`Unsubscribe from ${ch.label}`}
-                      aria-label={`Unsubscribe from ${ch.label}`}
+                      className="btn btn-ghost btn-danger mini-unsub"
                       onClick={() => unsubscribe(ch)}
                       disabled={busy === ch.username}
                     >
-                      <IconClose width={14} height={14} />
+                      Unsubscribe
                     </button>
                   </div>
                 ))}
@@ -162,19 +155,6 @@ export default function ChannelsView({ username }: { username: string }) {
           </main>
         </div>
       )}
-
-      <div className="toast-wrap" aria-live="polite">
-        {toasts.map((t) => (
-          <div className={`toast toast-${t.tone}`} key={t.id}>
-            {t.tone === "success" ? (
-              <IconCheck width={15} height={15} />
-            ) : (
-              <IconBell width={14} height={14} />
-            )}
-            {t.text}
-          </div>
-        ))}
-      </div>
 
       <div className="hint" style={{ marginTop: 26 }}>
         Signed in as <strong style={{ color: "var(--ink-2)", marginLeft: 4 }}>{username}</strong>

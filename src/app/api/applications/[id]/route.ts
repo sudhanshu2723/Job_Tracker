@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { APP_SELECT, sanitizeDraft } from "@/lib/appShape";
+import { enforceRateLimit } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 
@@ -15,6 +16,9 @@ const notFound = () => NextResponse.json({ error: "Not found." }, { status: 404 
 export async function PUT(req: Request, { params }: Ctx) {
   const session = await getSession();
   if (!session) return unauthorized();
+
+  const limited = await enforceRateLimit(req, "app-update", 120, 60, session.userId);
+  if (limited) return limited;
 
   const { id } = await params;
   const body = await req.json().catch(() => null);

@@ -26,24 +26,34 @@ export const APP_SELECT = {
   createdAt: true,
 } as const;
 
-/** Coerce an untrusted request body into a safe, complete draft. */
+/** Length-capped string coercion. */
+function cap(v: unknown, max: number): string {
+  const s = typeof v === "string" ? v : v == null ? "" : String(v);
+  return s.slice(0, max);
+}
+
+/** Only allow http(s) links — blocks javascript:/data: URLs (stored XSS). */
+function safeLink(v: unknown): string {
+  const s = typeof v === "string" ? v.trim() : "";
+  return /^https?:\/\//i.test(s) ? s.slice(0, 2000) : "";
+}
+
+/** Coerce an untrusted request body into a safe, complete, bounded draft. */
 export function sanitizeDraft(body: unknown): ApplicationDraft {
   const b = (body ?? {}) as Record<string, unknown>;
-  const str = (v: unknown, fallback = "") =>
-    typeof v === "string" ? v : v == null ? fallback : String(v);
   return {
-    company: str(b.company),
-    role: str(b.role),
-    location: str(b.location),
-    country: str(b.country),
-    source: str(b.source),
-    dateApplied: str(b.dateApplied),
+    company: cap(b.company, 200),
+    role: cap(b.role, 200),
+    location: cap(b.location, 200),
+    country: cap(b.country, 80),
+    source: cap(b.source, 120),
+    dateApplied: cap(b.dateApplied, 10),
     referral: Boolean(b.referral),
-    referrer: str(b.referrer),
+    referrer: cap(b.referrer, 120),
     status: toStatus(b.status),
-    ctc: str(b.ctc),
-    link: str(b.link),
-    followUp: str(b.followUp),
-    notes: str(b.notes),
+    ctc: cap(b.ctc, 60),
+    link: safeLink(b.link),
+    followUp: cap(b.followUp, 10),
+    notes: cap(b.notes, 5000),
   };
 }

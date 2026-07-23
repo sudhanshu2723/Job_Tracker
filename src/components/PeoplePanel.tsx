@@ -15,6 +15,7 @@ import {
 } from "@/lib/social";
 import { CHANNEL_USERNAMES } from "@/lib/channelsMeta";
 import { IconClose } from "./icons";
+import { useToast } from "./Toast";
 
 interface Props {
   onClose: () => void;
@@ -23,10 +24,9 @@ interface Props {
 }
 
 export function PeoplePanel({ onClose, onChanged }: Props) {
+  const toast = useToast();
   const [invites, setInvites] = useState<InvitesResponse | null>(null);
   const [friends, setFriends] = useState<FriendsResponse | null>(null);
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
 
   const [invUser, setInvUser] = useState("");
   const [invFrom, setInvFrom] = useState("");
@@ -40,8 +40,8 @@ export function PeoplePanel({ onClose, onChanged }: Props) {
   }, []);
 
   useEffect(() => {
-    reload().catch(() => setError("Couldn't load your people."));
-  }, [reload]);
+    reload().catch(() => toast("Couldn't load your people.", "error"));
+  }, [reload, toast]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -50,15 +50,13 @@ export function PeoplePanel({ onClose, onChanged }: Props) {
   }, [onClose]);
 
   async function run(fn: () => Promise<unknown>, successMsg?: string) {
-    setError("");
-    setNotice("");
     try {
       await fn();
       await reload();
       onChanged();
-      if (successMsg) setNotice(successMsg);
+      if (successMsg) toast(successMsg, "success");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong.");
+      toast(e instanceof Error ? e.message : "Something went wrong.", "error");
     }
   }
 
@@ -88,13 +86,6 @@ export function PeoplePanel({ onClose, onChanged }: Props) {
         </div>
 
         <div className="people-body">
-          {error && <div className="auth-error">{error}</div>}
-          {notice && (
-            <div className="auth-error" style={{ color: "var(--good)", background: "color-mix(in srgb, var(--good) 12%, transparent)" }}>
-              {notice}
-            </div>
-          )}
-
           {/* Requests for you */}
           <section className="people-section">
             <h3>Requests for you</h3>

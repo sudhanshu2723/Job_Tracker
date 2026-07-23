@@ -1,42 +1,41 @@
 import { NextResponse } from "next/server";
 import { randomInt } from "crypto";
 import { prisma } from "@/lib/prisma";
-import { hashPassword } from "@/lib/auth";
+import { hashPassword, hashOtp } from "@/lib/auth";
 import { sendOtp } from "@/lib/email";
+import { parseBody, registerSchema } from "@/lib/validation";
+import { enforceRateLimit } from "@/lib/rateLimit";
+import { CHANNEL_USERNAMES } from "@/lib/channelsMeta";
 
 export const runtime = "nodejs";
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const OTP_TTL_MS = 10 * 60 * 1000;
 
-// POST /api/auth/register — validate details, send an email OTP, stash pending signup.
+// POST /api/auth/register — validate, send an email OTP, stash pending signup.
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => null);
-  const email = String(body?.email ?? "").trim().toLowerCase();
-  const username = String(body?.username ?? "").trim().toLowerCase();
-  const password = String(body?.password ?? "");
+  const ipLimited = await enforceRateLimit(req, "register-ip", 8, 60);
+  if (ipLimited) return ipLimited;
 
-  if (!EMAIL_RE.test(email)) {
-    return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
+  const body = await req.json().catch(() => null);
+  const parsed = parseBody(registerSchema, body);
+  if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
+  const { email, username, password } = parsed.data;
+
+  // Reserved feed/bot usernames can never be registered (prevents channel squatting).
+  if (CHANNEL_USERNAMES.has(username)) {
+    return NextResponse.json({ error: "That username is reserved." }, { status: 409 });
   }
-  if (username.length < 3 || username.length > 30 || !/^[a-z0-9_.-]+$/.test(username)) {
-    return NextResponse.json(
-      { error: "Username must be 3–30 chars: letters, numbers, . _ -" },
-      { status: 400 },
-    );
-  }
-  if (password.length < 6) {
-    return NextResponse.json(
-      { error: "Password must be at least 6 characters." },
-      { status: 400 },
-    );
-  }
+
+  // Resend cooldown per email — limits OTP email-bombing / sender abuse.
+  const emailLimited = await enforceRateLimit(req, "register-email", 3, 600, email);
+  if (emailLimited) return emailLimited;
 
   const [emailTaken, nameTaken] = await Promise.all([
     prisma.user.findUnique({ where: { email } }),
     prisma.user.findUnique({ where: { username } }),
   ]);
-  if (emailTaken) return NextResponse.json({ error: "That email is already registered." }, { status: 409 });
+  if (emailTaken)
+    return NextResponse.json({ error: "That email is already registered." }, { status: 409 });
   if (nameTaken) return NextResponse.json({ error: "That username is taken." }, { status: 409 });
 
   const code = String(randomInt(100000, 1000000)); // 6 digits
@@ -45,8 +44,8 @@ export async function POST(req: Request) {
 
   await prisma.signupOtp.upsert({
     where: { email },
-    create: { email, username, passwordHash, code, expiresAt },
-    update: { username, passwordHash, code, expiresAt },
+    create: { email, username, passwordHash, code: hashOtp(code), expiresAt },
+    update: { username, passwordHash, code: hashOtp(code), expiresAt },
   });
 
   await sendOtp(email, code);

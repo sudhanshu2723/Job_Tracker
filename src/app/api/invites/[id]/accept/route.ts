@@ -19,6 +19,14 @@ export async function POST(_req: Request, { params }: Ctx) {
   if (invite.status !== "pending")
     return NextResponse.json({ error: "Already handled." }, { status: 409 });
 
+  // Claim the invite atomically first — a concurrent double-accept flips 0 rows.
+  const flipped = await prisma.invitation.updateMany({
+    where: { id, status: "pending" },
+    data: { status: "accepted" },
+  });
+  if (flipped.count === 0)
+    return NextResponse.json({ error: "Already handled." }, { status: 409 });
+
   // Copy MY (the accepter's) postings in the date window to the inviter.
   const copied = await shareOwnAppsToUser(
     session.userId,
@@ -27,6 +35,5 @@ export async function POST(_req: Request, { params }: Ctx) {
     { fromDate: invite.fromDate, toDate: invite.toDate },
   );
 
-  await prisma.invitation.update({ where: { id }, data: { status: "accepted" } });
   return NextResponse.json({ ok: true, copied });
 }

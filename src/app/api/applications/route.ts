@@ -3,6 +3,9 @@ import { prisma, warmupDb } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { APP_SELECT, sanitizeDraft } from "@/lib/appShape";
 import { fanoutToFriends } from "@/lib/sharing";
+import { enforceRateLimit } from "@/lib/rateLimit";
+
+const MAX_IMPORT_ROWS = 2000;
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,6 +32,9 @@ export async function POST(req: Request) {
   const session = await getSession();
   if (!session) return unauthorized();
 
+  const limited = await enforceRateLimit(req, "app-create", 60, 60, session.userId);
+  if (limited) return limited;
+
   const body = await req.json().catch(() => null);
   const draft = sanitizeDraft(body);
   if (!draft.company.trim() || !draft.role.trim()) {
@@ -51,9 +57,18 @@ export async function PUT(req: Request) {
   const session = await getSession();
   if (!session) return unauthorized();
 
+  const limited = await enforceRateLimit(req, "app-import", 5, 60, session.userId);
+  if (limited) return limited;
+
   const body = await req.json().catch(() => null);
   if (!Array.isArray(body)) {
     return NextResponse.json({ error: "Expected an array." }, { status: 400 });
+  }
+  if (body.length > MAX_IMPORT_ROWS) {
+    return NextResponse.json(
+      { error: `Too many rows (max ${MAX_IMPORT_ROWS}).` },
+      { status: 400 },
+    );
   }
   const rows = body
     .map((item) => ({ ...sanitizeDraft(item), userId: session.userId }))

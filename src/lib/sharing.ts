@@ -99,14 +99,18 @@ export async function acceptFriendship(
   requesterId: string,
   addresseeId: string,
 ): Promise<void> {
+  // Only a still-pending request flips to accepted — a concurrent double-accept
+  // updates 0 rows here and skips the (idempotent) backfill below.
+  const flipped = await prisma.friendship.updateMany({
+    where: { id: friendshipId, status: "pending" },
+    data: { status: "accepted" },
+  });
+  if (flipped.count === 0) return;
+
   const [requester, addressee] = await Promise.all([
     prisma.user.findUnique({ where: { id: requesterId }, select: { username: true } }),
     prisma.user.findUnique({ where: { id: addresseeId }, select: { username: true } }),
   ]);
-  await prisma.friendship.update({
-    where: { id: friendshipId },
-    data: { status: "accepted" },
-  });
   if (requester && addressee) {
     await shareOwnAppsToUser(requesterId, requester.username, addresseeId);
     await shareOwnAppsToUser(addresseeId, addressee.username, requesterId);

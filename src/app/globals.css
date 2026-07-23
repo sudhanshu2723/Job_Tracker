@@ -173,9 +173,9 @@ body {
 
 /* ---------- Layout shell ---------- */
 .app {
-  max-width: 1180px;
+  max-width: 1760px;
   margin: 0 auto;
-  padding: 22px 24px 80px;
+  padding: 22px 28px 80px;
 }
 
 .topbar {
@@ -1146,6 +1146,16 @@ table.apps {
   .apps .cell-role {
     white-space: normal;
   }
+  /* Vertical dividers between columns, matching the row lines */
+  .apps thead th:not(:last-child),
+  .apps tbody td:not(:last-child) {
+    border-right: 1px solid var(--border);
+  }
+  /* Keep the actions (edit/delete) column from being squeezed off */
+  .apps thead th:last-child,
+  .apps tbody td:last-child {
+    min-width: 84px;
+  }
 }
 
 /* ---------- Channels page ---------- */
@@ -1297,6 +1307,12 @@ table.apps {
 .mini-sub strong {
   color: var(--good);
 }
+.mini-unsub {
+  flex: none;
+  padding: 6px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+}
 @media (max-width: 720px) {
   .channels-layout {
     grid-template-columns: 1fr;
@@ -1341,6 +1357,36 @@ table.apps {
   from {
     opacity: 0;
     transform: translateY(10px);
+  }
+}
+
+/* ---------- Loader / spinner ---------- */
+.loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 56px 20px;
+  color: var(--muted);
+}
+.loader-full {
+  min-height: 65vh;
+}
+.spinner {
+  width: 34px;
+  height: 34px;
+  border: 3px solid var(--border-strong);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+.loader-label {
+  font-size: 13px;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 @media (max-width: 560px) {

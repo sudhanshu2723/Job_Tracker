@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma, warmupDb } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { CHANNEL_META } from "@/lib/channelsMeta";
 
@@ -12,6 +12,7 @@ export async function GET() {
   if (!session) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   const me = session.userId;
 
+  await warmupDb();
   const usernames = CHANNEL_META.map((c) => c.username);
   const bots = await prisma.user.findMany({
     where: { username: { in: usernames } },
