@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   STATUSES,
@@ -9,22 +9,8 @@ import {
   type ApplicationDraft,
   type StatusKey,
 } from "@/lib/types";
-import {
-  loadTheme,
-  saveTheme,
-  downloadJSON,
-  downloadCSV,
-  parseImportedJSON,
-  today as todayISO,
-} from "@/lib/storage";
-import {
-  apiList,
-  apiCreate,
-  apiUpdate,
-  apiDelete,
-  apiClear,
-  apiReplace,
-} from "@/lib/api";
+import { loadTheme, saveTheme, today as todayISO } from "@/lib/storage";
+import { apiList, apiCreate, apiUpdate, apiDelete, apiClear } from "@/lib/api";
 import { computeKpis, countByStatus, daysAgo, isFollowUpDue } from "@/lib/stats";
 import { matchesLevel } from "@/lib/level";
 import { ApplicationForm } from "./ApplicationForm";
@@ -34,8 +20,6 @@ import {
   IconEdit,
   IconTrash,
   IconLink,
-  IconDownload,
-  IconUpload,
   IconSun,
   IconMoon,
   IconBell,
@@ -91,7 +75,6 @@ export default function Dashboard({ username }: { username: string }) {
   const [editing, setEditing] = useState<Application | null>(null);
   const [peopleOpen, setPeopleOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const today = todayISO();
 
@@ -193,30 +176,6 @@ export default function Dashboard({ username }: { username: string }) {
     }
   }
 
-  function onImportFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    file.text().then(async (text) => {
-      const parsed = parseImportedJSON(text);
-      if (!parsed) {
-        alert("That file isn't a valid applications export.");
-        return;
-      }
-      if (
-        apps.length &&
-        !confirm(`Import ${parsed.length} applications and REPLACE the current list?`)
-      )
-        return;
-      try {
-        const saved = await apiReplace(parsed);
-        setApps(saved);
-      } catch {
-        alert("Import failed.");
-      }
-    });
-    e.target.value = "";
-  }
-
   // ---- Derived data ----
   const kpis = useMemo(() => computeKpis(apps, today), [apps, today]);
   const statusCounts = useMemo(() => countByStatus(apps), [apps]);
@@ -294,22 +253,6 @@ export default function Dashboard({ username }: { username: string }) {
           </div>
         </div>
 
-        <button className="btn" onClick={() => downloadCSV(apps)} title="Export CSV">
-          <IconDownload /> CSV
-        </button>
-        <button className="btn" onClick={() => downloadJSON(apps)} title="Export JSON backup">
-          <IconDownload /> JSON
-        </button>
-        <button className="btn" onClick={() => fileRef.current?.click()} title="Import JSON">
-          <IconUpload /> Import
-        </button>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="application/json"
-          onChange={onImportFile}
-          hidden
-        />
         <button
           className="btn btn-icon"
           onClick={() => applyTheme(theme === "dark" ? "light" : "dark")}
@@ -544,12 +487,14 @@ export default function Dashboard({ username }: { username: string }) {
                       )}
                     </div>
                   </td>
-                  <td>
+                  <td data-label="Source">
                     <div>{a.source || "—"}</div>
                     {a.location && <div className="cell-sub">{a.location}</div>}
                   </td>
-                  <td>{a.country ? a.country : <span className="cell-sub">—</span>}</td>
-                  <td className="tnum">
+                  <td data-label="Country">
+                    {a.country ? a.country : <span className="cell-sub">—</span>}
+                  </td>
+                  <td className="tnum" data-label="Applied">
                     {a.dateApplied ? (
                       <>
                         <div>{formatDate(a.dateApplied)}</div>
@@ -559,7 +504,7 @@ export default function Dashboard({ username }: { username: string }) {
                       <span className="cell-sub">—</span>
                     )}
                   </td>
-                  <td className="tnum">
+                  <td className="tnum" data-label="Fetched">
                     {a.createdAt ? (
                       <>
                         <div>{formatDate(a.createdAt.slice(0, 10))}</div>
@@ -569,7 +514,7 @@ export default function Dashboard({ username }: { username: string }) {
                       <span className="cell-sub">—</span>
                     )}
                   </td>
-                  <td>
+                  <td data-label="Referral">
                     {a.referral ? (
                       <span className="badge badge-ref" title={a.referrer || "Referral"}>
                         {a.referrer ? a.referrer.split(" ")[0] : "Yes"}
@@ -578,7 +523,7 @@ export default function Dashboard({ username }: { username: string }) {
                       <span className="badge badge-none">—</span>
                     )}
                   </td>
-                  <td>
+                  <td data-label="Status">
                     <select
                       className="status-select"
                       value={a.status}
@@ -593,7 +538,7 @@ export default function Dashboard({ username }: { username: string }) {
                       ))}
                     </select>
                   </td>
-                  <td className="tnum">
+                  <td className="tnum" data-label="Follow-up">
                     {a.followUp ? (
                       <span className={isFollowUpDue(a, today) ? "due" : ""}>
                         {formatDate(a.followUp)}
@@ -602,7 +547,7 @@ export default function Dashboard({ username }: { username: string }) {
                       <span className="cell-sub">—</span>
                     )}
                   </td>
-                  <td>
+                  <td data-label="Link">
                     {a.link ? (
                       <a
                         className="open-link"
