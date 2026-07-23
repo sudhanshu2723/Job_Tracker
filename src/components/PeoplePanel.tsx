@@ -13,7 +13,7 @@ import {
   type InvitesResponse,
   type FriendsResponse,
 } from "@/lib/social";
-import { CHANNEL_META, CHANNEL_USERNAMES } from "@/lib/channelsMeta";
+import { CHANNEL_USERNAMES } from "@/lib/channelsMeta";
 import { IconClose } from "./icons";
 
 interface Props {
@@ -94,42 +94,6 @@ export function PeoplePanel({ onClose, onChanged }: Props) {
               {notice}
             </div>
           )}
-
-          {/* Job feed channels */}
-          <section className="people-section">
-            <h3>Job feed channels</h3>
-            <p className="people-note">
-              Subscribe to any feed — new matching jobs sync into your list automatically.
-            </p>
-            {CHANNEL_META.map((ch) => {
-              const sub = friendList.find((f) => f.username === ch.username);
-              return (
-                <div className="req-item" key={ch.username}>
-                  <div className="grow">
-                    <span className="who">{ch.label}</span>
-                    <div className="req-sub">{ch.description}</div>
-                  </div>
-                  {sub ? (
-                    <button
-                      className="btn btn-ghost btn-danger"
-                      onClick={() => run(() => removeFriend(sub.id))}
-                    >
-                      Unsubscribe
-                    </button>
-                  ) : (
-                    <button
-                      className="btn btn-primary"
-                      onClick={() =>
-                        run(() => sendFriendRequest(ch.username), `Subscribed to ${ch.label}.`)
-                      }
-                    >
-                      Subscribe
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </section>
 
           {/* Requests for you */}
           <section className="people-section">

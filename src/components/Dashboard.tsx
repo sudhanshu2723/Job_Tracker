@@ -261,15 +261,6 @@ export default function Dashboard({ username }: { username: string }) {
         >
           {theme === "dark" ? <IconSun /> : <IconMoon />}
         </button>
-        <button
-          className="btn btn-primary"
-          onClick={() => {
-            setEditing(null);
-            setModalOpen(true);
-          }}
-        >
-          <IconPlus /> Add application
-        </button>
 
         <button
           className="btn btn-icon people-btn"
@@ -444,6 +435,22 @@ export default function Dashboard({ username }: { username: string }) {
           <option value="company">Company A–Z</option>
           <option value="followup">Follow-up soonest</option>
         </select>
+      </div>
+
+      {/* Action row: Subscribe (left) · Add application (right) */}
+      <div className="table-actions">
+        <button className="btn" onClick={() => router.push("/channels")}>
+          <IconUsers width={15} height={15} /> Subscribe to feeds
+        </button>
+        <button
+          className="btn btn-primary"
+          onClick={() => {
+            setEditing(null);
+            setModalOpen(true);
+          }}
+        >
+          <IconPlus /> Add application
+        </button>
       </div>
 
       {/* Table */}
