@@ -1,37 +1,39 @@
 import "server-only";
+import nodemailer from "nodemailer";
+
+let transporter: nodemailer.Transporter | null = null;
+
+function getTransporter(): nodemailer.Transporter | null {
+  const user = process.env.GMAIL_USER;
+  const pass = process.env.GMAIL_APP_PASSWORD;
+  if (!user || !pass) return null;
+  if (!transporter) {
+    transporter = nodemailer.createTransport({ service: "gmail", auth: { user, pass } });
+  }
+  return transporter;
+}
 
 /**
- * Sends a signup OTP. Uses Resend's REST API when RESEND_API_KEY is set
- * (no SDK/dependency needed); otherwise logs the code to the server console
- * so signup is testable locally without an email provider.
+ * Sends a signup OTP via Gmail SMTP when GMAIL_USER + GMAIL_APP_PASSWORD are set
+ * (App Password, not the account password). Otherwise logs the code to the
+ * server console so signup is testable locally without email configured.
  */
 export async function sendOtp(email: string, code: string): Promise<void> {
-  const key = process.env.RESEND_API_KEY;
-  const from = process.env.OTP_FROM || "onboarding@resend.dev";
-
-  if (!key) {
+  const t = getTransporter();
+  if (!t) {
     console.log(`\n[OTP] verification code for ${email}: ${code}\n`);
     return;
   }
 
+  const from = process.env.OTP_FROM || process.env.GMAIL_USER;
   try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${key}`,
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        from,
-        to: email,
-        subject: "Your JobTrack verification code",
-        text: `Your JobTrack verification code is ${code}. It expires in 10 minutes.`,
-      }),
+    await t.sendMail({
+      from,
+      to: email,
+      subject: "Your JobTrack verification code",
+      text: `Your JobTrack verification code is ${code}. It expires in 10 minutes.`,
     });
-    if (!res.ok) {
-      console.error(`[OTP] Resend failed (${res.status}); code for ${email}: ${code}`);
-    }
   } catch (err) {
-    console.error(`[OTP] send error; code for ${email}: ${code}`, err);
+    console.error(`[OTP] Gmail send failed; code for ${email}: ${code}`, err);
   }
 }
