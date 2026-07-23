@@ -9,6 +9,8 @@ describe("isMnc", () => {
       "NVIDIA", "Goldman Sachs", "JPMorgan Chase", "JP Morgan", "American Express",
       "D. E. Shaw & Co", "Palo Alto Networks", "ServiceNow", "Walmart Global Tech",
       "Flipkart Internet Pvt Ltd", "Uber India", "MongoDB, Inc.",
+      "Razorpay", "Zscaler", "CrowdStrike", "Two Sigma", "NXP Semiconductors",
+      "Games24x7", "Freshworks", "PhonePe", "Western Digital", "Arcesium",
     ]) {
       expect(isMnc(c), c).toBe(true);
     }
@@ -17,15 +19,15 @@ describe("isMnc", () => {
   it("rejects small / unknown companies", () => {
     for (const c of [
       "Acme Startup", "TechNova Solutions", "Zenith Labs", "CloudKart India",
-      "Metabase", "Sapient Global", "", "Freshworks Local",
+      "Metabase", "Sapient Global", "", "CodeCrafters Pvt Ltd", "Persistent Systems",
       "Meta Digital Solutions Pvt Ltd", "Deep.Meta", // must NOT match Meta/Facebook
     ]) {
       expect(isMnc(c), c).toBe(false);
     }
   });
 
-  it("has exactly 50 curated companies", () => {
-    expect(MNC_COMPANIES.length).toBe(50);
+  it("has exactly 100 curated companies", () => {
+    expect(MNC_COMPANIES.length).toBe(100);
   });
 
   it("handles null/undefined", () => {

@@ -175,18 +175,13 @@ export default function Dashboard({ username }: { username: string }) {
   }
 
   // ---- Derived data ----
-  const kpis = useMemo(() => computeKpis(apps, today), [apps, today]);
-  const statusCounts = useMemo(() => countByStatus(apps), [apps]);
-
-  const countries = useMemo(
-    () => [...new Set(apps.map((a) => a.country).filter(Boolean))].sort(),
-    [apps],
-  );
-
-  const visible = useMemo(() => {
+  // Apply every filter EXCEPT the status filter. The KPIs and the pipeline-by-
+  // stage breakdown are computed from this set, so they reflect the current
+  // filters (e.g. "MNCs only" → only those jobs' interviews/offers/etc.), while
+  // the status filter still just narrows the table below.
+  const filteredBase = useMemo(() => {
     const q = deferredSearch.trim().toLowerCase();
-    let list = apps.filter((a) => {
-      if (statusFilter !== "all" && a.status !== statusFilter) return false;
+    return apps.filter((a) => {
       if (countryFilter !== "all" && a.country !== countryFilter) return false;
       if (!matchesLevel(a.role, levelFilter)) return false;
       if (companyFilter === "mnc" && !isMnc(a.company)) return false;
@@ -202,7 +197,22 @@ export default function Dashboard({ username }: { username: string }) {
       }
       return true;
     });
-    list = [...list].sort((a, b) => {
+  }, [apps, deferredSearch, countryFilter, levelFilter, companyFilter, refFilter, fetchedFilter]);
+
+  const kpis = useMemo(() => computeKpis(filteredBase, today), [filteredBase, today]);
+  const statusCounts = useMemo(() => countByStatus(filteredBase), [filteredBase]);
+
+  const countries = useMemo(
+    () => [...new Set(apps.map((a) => a.country).filter(Boolean))].sort(),
+    [apps],
+  );
+
+  const visible = useMemo(() => {
+    const list =
+      statusFilter === "all"
+        ? filteredBase
+        : filteredBase.filter((a) => a.status === statusFilter);
+    return [...list].sort((a, b) => {
       switch (sort) {
         case "fetched":
           return (b.createdAt || "").localeCompare(a.createdAt || "");
@@ -218,8 +228,7 @@ export default function Dashboard({ username }: { username: string }) {
           return (b.dateApplied || "").localeCompare(a.dateApplied || "");
       }
     });
-    return list;
-  }, [apps, deferredSearch, statusFilter, countryFilter, levelFilter, companyFilter, refFilter, fetchedFilter, sort]);
+  }, [filteredBase, statusFilter, sort]);
 
   // Reset to page 1 whenever the filtered result set changes.
   useEffect(() => {
@@ -324,7 +333,9 @@ export default function Dashboard({ username }: { username: string }) {
         <div className="card">
           <div className="card-head">
             <h2>Pipeline by stage</h2>
-            <span className="sub">{apps.length} total</span>
+            <span className="sub">
+              {filteredBase.length} {filteredBase.length === apps.length ? "total" : "filtered"}
+            </span>
           </div>
           <div className="pipeline-strip">
             {STATUSES.map((s) => (
@@ -390,10 +401,10 @@ export default function Dashboard({ username }: { username: string }) {
           value={companyFilter}
           onChange={(e) => setCompanyFilter(e.target.value as "all" | "mnc")}
           aria-label="Filter by company type"
-          title="Show only top MNCs (high-paying, well-known multinationals hiring in India)"
+          title="Show only top product-based companies (≈₹12L+ for software in India)"
         >
           <option value="all">All companies</option>
-          <option value="mnc">MNCs only (top 50)</option>
+          <option value="mnc">Top product cos (₹12L+)</option>
         </select>
         <select
           className="select"

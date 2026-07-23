@@ -1,20 +1,37 @@
-// Curated top-50 MNCs that hire freshers in India, ranked by brand recognition
-// and fresher compensation. Deliberately weighted toward product / fintech /
-// quant / hardware firms (which pay freshers well) over mass IT-services shops.
-// Powers the dashboard's "MNCs only" company filter — a best-effort heuristic
-// that matches a posting's company name against these brands' aliases.
+// Curated top-100 majorly PRODUCT-BASED companies that pay ≥ ~₹12 LPA to
+// software engineers in India (well-known product / SaaS / fintech / quant /
+// semiconductor firms + Indian product unicorns — deliberately excludes
+// low-paying mass IT-services shops). Powers the dashboard's company filter —
+// a best-effort heuristic matching a posting's company name against these
+// brands' aliases.
 
 export const MNC_COMPANIES: string[] = [
+  // Global big tech / product
   "Google", "Microsoft", "Amazon", "Meta", "Apple",
   "Netflix", "Adobe", "Nvidia", "Salesforce", "Uber",
   "Atlassian", "LinkedIn", "Oracle", "SAP", "Intel",
   "Qualcomm", "Cisco", "VMware", "PayPal", "Visa",
   "Mastercard", "Samsung", "Texas Instruments", "AMD", "Micron",
   "ServiceNow", "Workday", "Twilio", "Walmart", "Flipkart",
+  // Fintech / banks / quant
   "Goldman Sachs", "Morgan Stanley", "JPMorgan", "American Express", "Wells Fargo",
   "D. E. Shaw", "Tower Research", "Optiver", "Jane Street", "Citadel",
+  "Arcesium", "WorldQuant", "Two Sigma", "Millennium", "AlphaGrep",
+  // SaaS / infra / data / security
   "Databricks", "Snowflake", "MongoDB", "Confluent", "Stripe",
   "Sprinklr", "Palo Alto Networks", "Arista Networks", "Nutanix", "Expedia",
+  "Intuit", "Autodesk", "Akamai", "Zscaler", "CrowdStrike",
+  "Splunk", "Rubrik", "Cohesity", "Druva", "NetApp",
+  "GitHub", "GitLab", "HashiCorp", "Elastic", "Datadog",
+  "Cloudflare", "Notion", "Figma", "Airbnb", "Shopify",
+  // Semiconductors / hardware
+  "Broadcom", "Marvell", "Analog Devices", "NXP Semiconductors", "Synopsys",
+  "Cadence", "Western Digital",
+  // Indian product unicorns / high-paying product cos
+  "Razorpay", "CRED", "Zerodha", "Groww", "PhonePe",
+  "Paytm", "Swiggy", "Zomato", "Meesho", "Dream11",
+  "Games24x7", "Postman", "Freshworks", "BrowserStack", "Juspay",
+  "Zeta", "Innovaccer", "Chargebee",
 ];
 
 // Lowercase, dot-free match aliases (whole-word matched against a posting's
@@ -60,6 +77,11 @@ const ALIASES: string[] = [
   "optiver",
   "jane street",
   "citadel",
+  "arcesium",
+  "worldquant", "world quant",
+  "two sigma",
+  "millennium",
+  "alphagrep", "alpha grep",
   "databricks",
   "snowflake",
   "mongodb",
@@ -70,12 +92,57 @@ const ALIASES: string[] = [
   "arista",
   "nutanix",
   "expedia",
+  "intuit",
+  "autodesk",
+  "akamai",
+  "zscaler",
+  "crowdstrike",
+  "splunk",
+  "rubrik",
+  "cohesity",
+  "druva",
+  "netapp",
+  "github",
+  "gitlab",
+  "hashicorp",
+  "elastic",
+  "datadog",
+  "cloudflare",
+  "notion",
+  "figma",
+  "airbnb",
+  "shopify",
+  "broadcom",
+  "marvell",
+  "analog devices",
+  "nxp",
+  "synopsys",
+  "cadence",
+  "western digital", "sandisk",
+  "razorpay",
+  "cred",
+  "zerodha",
+  "groww",
+  "phonepe",
+  "paytm", "one97",
+  "swiggy",
+  "zomato",
+  "meesho",
+  "dream11", "dream sports",
+  "games24x7", "games 24x7",
+  "postman",
+  "freshworks", "freshdesk",
+  "browserstack",
+  "juspay",
+  "zeta",
+  "innovaccer",
+  "chargebee",
 ];
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const MNC_RE = new RegExp(`\\b(${ALIASES.map(escape).join("|")})\\b`, "i");
 
-/** True when a posting's company name looks like one of the curated MNCs. */
+/** True when a posting's company name looks like one of the curated companies. */
 export function isMnc(company: string | null | undefined): boolean {
   if (!company) return false;
   const c = company.toLowerCase().replace(/\./g, " ").replace(/\s+/g, " ").trim();
