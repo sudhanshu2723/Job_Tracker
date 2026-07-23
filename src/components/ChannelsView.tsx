@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { sendFriendRequest, removeFriend } from "@/lib/social";
-import { IconArrowLeft, IconCheck, IconPlus, IconBell } from "./icons";
+import { IconArrowLeft, IconCheck, IconPlus, IconBell, IconClose } from "./icons";
 
 interface ChannelStat {
   username: string;
@@ -97,47 +97,39 @@ export default function ChannelsView({ username }: { username: string }) {
       {!channels && !error && <div className="empty-mini">Loading feeds…</div>}
 
       {channels && (
-        <>
-          <section className="channel-section">
+        <div className="channels-layout">
+          {/* Left: subscribed feeds — compact blocks */}
+          <aside className="channels-left">
             <h2>Your feeds ({subscribed.length})</h2>
             {subscribed.length === 0 ? (
-              <div className="empty-mini">
-                You haven&apos;t subscribed to any feed yet — pick one below.
-              </div>
+              <div className="empty-mini">No feeds yet — subscribe from the right.</div>
             ) : (
-              <div className="channel-grid">
+              <div className="mini-list">
                 {subscribed.map((ch) => (
-                  <div className="channel-card" key={ch.username}>
-                    <div className="channel-top">
-                      <h3>{ch.label}</h3>
-                      <span className="sub-badge">
-                        <IconCheck width={13} height={13} /> Subscribed
-                      </span>
+                  <div className="channel-mini" key={ch.username}>
+                    <div className="mini-main">
+                      <div className="mini-name">{ch.label}</div>
+                      <div className="mini-sub">
+                        <strong>{ch.myCount}</strong> brought in · {ch.totalJobs} in feed
+                      </div>
                     </div>
-                    <p className="desc">{ch.description}</p>
-                    <div className="channel-stat">
-                      <span className="num">{ch.myCount}</span> postings brought in
-                      <span className="stat-sub"> · {ch.totalJobs} in the feed</span>
-                    </div>
-                    <div className="channel-actions">
-                      <button className="btn btn-ghost" onClick={() => router.push("/")}>
-                        View in dashboard →
-                      </button>
-                      <button
-                        className="btn btn-ghost btn-danger"
-                        onClick={() => unsubscribe(ch)}
-                        disabled={busy === ch.username}
-                      >
-                        Unsubscribe
-                      </button>
-                    </div>
+                    <button
+                      className="btn btn-icon btn-ghost btn-danger"
+                      title={`Unsubscribe from ${ch.label}`}
+                      aria-label={`Unsubscribe from ${ch.label}`}
+                      onClick={() => unsubscribe(ch)}
+                      disabled={busy === ch.username}
+                    >
+                      <IconClose width={14} height={14} />
+                    </button>
                   </div>
                 ))}
               </div>
             )}
-          </section>
+          </aside>
 
-          <section className="channel-section">
+          {/* Right: available feeds — big subscribe cards */}
+          <main className="channels-right">
             <h2>Available feeds ({available.length})</h2>
             {available.length === 0 ? (
               <div className="empty-mini">You&apos;re subscribed to every feed. 🎉</div>
@@ -167,8 +159,8 @@ export default function ChannelsView({ username }: { username: string }) {
                 ))}
               </div>
             )}
-          </section>
-        </>
+          </main>
+        </div>
       )}
 
       <div className="toast-wrap" aria-live="polite">

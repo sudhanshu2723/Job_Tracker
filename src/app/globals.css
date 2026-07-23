@@ -1246,6 +1246,64 @@ table.apps {
   white-space: nowrap;
 }
 
+/* Two-column: subscribed (left, compact) · available (right, cards) */
+.channels-layout {
+  display: grid;
+  grid-template-columns: minmax(230px, 320px) 1fr;
+  gap: 24px;
+  align-items: start;
+  margin-top: 14px;
+}
+.channels-left h2,
+.channels-right h2 {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-2);
+  font-weight: 600;
+  margin: 4px 0 12px;
+}
+.mini-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.channel-mini {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  box-shadow: var(--shadow-sm);
+}
+.channel-mini .mini-main {
+  flex: 1;
+  min-width: 0;
+}
+.mini-name {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mini-sub {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-top: 1px;
+}
+.mini-sub strong {
+  color: var(--good);
+}
+@media (max-width: 720px) {
+  .channels-layout {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+}
+
 /* ---------- Toasts ---------- */
 .toast-wrap {
   position: fixed;
