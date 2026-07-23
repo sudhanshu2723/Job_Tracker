@@ -13,6 +13,7 @@ import { loadTheme, saveTheme, today as todayISO } from "@/lib/storage";
 import { apiList, apiCreate, apiUpdate, apiDelete, apiClear } from "@/lib/api";
 import { computeKpis, countByStatus, daysAgo, isFollowUpDue } from "@/lib/stats";
 import { matchesLevel } from "@/lib/level";
+import { isMnc } from "@/lib/mncs";
 import { ApplicationForm } from "./ApplicationForm";
 import {
   IconPlus,
@@ -59,6 +60,7 @@ export default function Dashboard({ username }: { username: string }) {
   const [countryFilter, setCountryFilter] = useState<string>("all");
   const [levelFilter, setLevelFilter] = useState<"all" | "fresher" | "experienced">("all");
   const [refFilter, setRefFilter] = useState<"all" | "yes" | "no">("all");
+  const [companyFilter, setCompanyFilter] = useState<"all" | "mnc">("all");
   const [fetchedFilter, setFetchedFilter] = useState<FetchedFilter>("all");
   const [sort, setSort] = useState<SortKey>("fetched");
   const [page, setPage] = useState(1);
@@ -187,6 +189,7 @@ export default function Dashboard({ username }: { username: string }) {
       if (statusFilter !== "all" && a.status !== statusFilter) return false;
       if (countryFilter !== "all" && a.country !== countryFilter) return false;
       if (!matchesLevel(a.role, levelFilter)) return false;
+      if (companyFilter === "mnc" && !isMnc(a.company)) return false;
       if (refFilter === "yes" && !a.referral) return false;
       if (refFilter === "no" && a.referral) return false;
       if (fetchedFilter !== "all") {
@@ -216,12 +219,12 @@ export default function Dashboard({ username }: { username: string }) {
       }
     });
     return list;
-  }, [apps, deferredSearch, statusFilter, countryFilter, levelFilter, refFilter, fetchedFilter, sort]);
+  }, [apps, deferredSearch, statusFilter, countryFilter, levelFilter, companyFilter, refFilter, fetchedFilter, sort]);
 
   // Reset to page 1 whenever the filtered result set changes.
   useEffect(() => {
     setPage(1);
-  }, [deferredSearch, statusFilter, countryFilter, levelFilter, refFilter, fetchedFilter, sort]);
+  }, [deferredSearch, statusFilter, countryFilter, levelFilter, companyFilter, refFilter, fetchedFilter, sort]);
 
   const totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -381,6 +384,16 @@ export default function Dashboard({ username }: { username: string }) {
           <option value="all">All levels</option>
           <option value="fresher">Fresher / entry</option>
           <option value="experienced">Experienced / senior</option>
+        </select>
+        <select
+          className="select"
+          value={companyFilter}
+          onChange={(e) => setCompanyFilter(e.target.value as "all" | "mnc")}
+          aria-label="Filter by company type"
+          title="Show only top MNCs (high-paying, well-known multinationals hiring in India)"
+        >
+          <option value="all">All companies</option>
+          <option value="mnc">MNCs only (top 50)</option>
         </select>
         <select
           className="select"
