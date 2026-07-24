@@ -72,7 +72,7 @@ export default function ReferralComposer({ username }: { username: string }) {
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     if (!f) return;
-    if (!/\.pdf$/i.test(f.name)) return toast("Please upload a PDF résumé.", "error");
+    if (!/\.pdf$/i.test(f.name)) return toast("Please upload a PDF resume.", "error");
     setFileName(f.name);
     setPdfB64(await fileToBase64(f));
   }
@@ -97,7 +97,7 @@ export default function ReferralComposer({ username }: { username: string }) {
   }
 
   async function generate() {
-    if (!pdfB64) return toast("Upload your résumé PDF first.", "error");
+    if (!pdfB64) return toast("Upload your resume PDF first.", "error");
     if (jd.trim().length < 40) return toast("Paste the job description.", "error");
     setBusy(true);
     setResults(null);
@@ -151,7 +151,7 @@ export default function ReferralComposer({ username }: { username: string }) {
         </button>
         <div>
           <h1>Referral to Recruiters</h1>
-          <p>Résumé + job description → a professional referral-request email. Add recruiters, review, and send from your Gmail (résumé attached).</p>
+          <p>Resume + job description → a professional referral-request email. Add recruiters, review, and send from your Gmail (resume attached).</p>
         </div>
       </header>
 
@@ -160,15 +160,15 @@ export default function ReferralComposer({ username }: { username: string }) {
         <p className="how-lead">
           A referral from someone inside a company gives your application a real boost. This tool writes a polished,
           personalized email asking recruiters or employees at your target company to refer you for a specific job —
-          with your résumé attached. Each person gets their own copy, addressed to them by name.
+          with your resume attached. Each person gets their own copy, addressed to them by name.
         </p>
         <ol>
-          <li><strong>Add the job.</strong> Upload your résumé (PDF) and paste the job description. Optionally add the company name and the job posting link.</li>
-          <li><strong>Generate the draft.</strong> Click <em>Generate draft</em> — a professional referral-request email is written from your résumé and the role.</li>
+          <li><strong>Add the job.</strong> Upload your resume (PDF) and paste the job description. Optionally add the company name and the job posting link.</li>
+          <li><strong>Generate the draft.</strong> Click <em>Generate draft</em> — a professional referral-request email is written from your resume and the role.</li>
           <li><strong>Review &amp; edit.</strong> Tweak the subject and body freely. <code>{"{{name}}"}</code> becomes each recipient&apos;s first name and <code>{"{{my_email}}"}</code> becomes your Gmail when sent.</li>
           <li><strong>Add recruiters.</strong> Paste <em>Name, email</em> lines, or upload an Excel/CSV with name &amp; email columns — they&apos;re added to the list.</li>
           <li><strong>Connect your Gmail.</strong> Enter your Gmail address and a 16-character <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer">App Password</a> (needs 2-Step Verification). It&apos;s used only for this send — never stored.</li>
-          <li><strong>Send.</strong> Click <em>Send to N people</em> — everyone gets a personalized email with your résumé attached, and you see who it reached.</li>
+          <li><strong>Send.</strong> Click <em>Send to N people</em> — everyone gets a personalized email with your resume attached, and you see who it reached.</li>
         </ol>
       </details>
 
@@ -178,7 +178,7 @@ export default function ReferralComposer({ username }: { username: string }) {
           <div className="resume-box">
             <section className="fr-section" style={{ marginTop: 0 }}>
               <div className="field">
-                <label htmlFor="pdf">Your résumé (PDF)</label>
+                <label htmlFor="pdf">Your resume (PDF)</label>
                 <input id="pdf" type="file" accept="application/pdf,.pdf" onChange={onFile} />
                 {fileName && <span className="cell-sub">Loaded: {fileName}</span>}
               </div>

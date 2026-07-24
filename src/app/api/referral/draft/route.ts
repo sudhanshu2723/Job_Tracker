@@ -25,12 +25,12 @@ const SYSTEM = [
   "Follow this STRUCTURE EXACTLY:",
   "  • First line: 'Hi {{name}},' then a blank line. ({{name}} is a literal placeholder — never a real name.)",
   "  • Then EXACTLY THREE paragraphs, each SEPARATED BY A BLANK LINE:",
-  "     Paragraph 1 — briefly introduce yourself and your interest in the specific role at the company; mention one or two concrete, genuine reasons you're a fit, drawn from the résumé. Do NOT put the job link here.",
+  "     Paragraph 1 — briefly introduce yourself and your interest in the specific role at the company; mention one or two concrete, genuine reasons you're a fit, drawn from the resume. Do NOT put the job link here.",
   "     Paragraph 2 — politely ask whether they'd be willing to refer you for this role, and tell them they can use your email to refer you written as the literal placeholder {{my_email}}. Then include this sentence VERBATIM, replacing [Insert Job Link] with the actual bare JOB LINK url: 'I have attached my resume for your review, and here is the link to the job posting for your reference: [Insert Job Link].' (If no JOB LINK was provided, instead write just: 'I have attached my resume for your review.')",
   "     Paragraph 3 — a brief, professional thank-you.",
   "  • Then a blank line, then EXACTLY these two lines (nothing after):",
   "     Thanks & Regards,",
-  "     <the candidate's real full name, taken from the résumé>",
+  "     <the candidate's real full name, taken from the resume>",
   "Use ONLY the placeholders {{name}} and {{my_email}} — no others. Keep the three paragraphs to ~120–180 words total. Plain text only — no markdown, no bullet lists, no quotation marks around the link.",
 ].join("\n");
 
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
   const company = String(body?.company ?? "").slice(0, 200).trim();
   const jobLink = String(body?.jobLink ?? "").slice(0, 500).trim();
   if (!pdfBase64 || pdfBase64.length > MAX_PDF_B64)
-    return NextResponse.json({ error: "Upload your résumé PDF (max ~9 MB)." }, { status: 400 });
+    return NextResponse.json({ error: "Upload your resume PDF (max ~9 MB)." }, { status: 400 });
   if (jd.trim().length < 40) return NextResponse.json({ error: "Paste the job description." }, { status: 400 });
 
   let resumeText = "";
@@ -67,7 +67,7 @@ export async function POST(req: Request) {
     company ? `TARGET COMPANY: ${company}` : "",
     jobLink ? `JOB LINK: ${jobLink}` : "",
     `JOB DESCRIPTION:\n${jd}`,
-    `\nCANDIDATE RÉSUMÉ:\n${resumeText}`.slice(0, 16_000),
+    `\nCANDIDATE RESUME:\n${resumeText}`.slice(0, 16_000),
     "\nWrite the referral-request email (subject + body). The body must start with 'Hi {{name}},', include the job link if given, and include the {{my_email}} line.",
   ].filter(Boolean).join("\n");
 

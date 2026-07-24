@@ -10,14 +10,14 @@ export const maxDuration = 60;
 const MAX_PDF_B64 = 12_000_000;
 const MAX_JD = 25_000;
 
-// The whole résumé is sent line-by-line; the model identifies the skills lines
+// The whole resume is sent line-by-line; the model identifies the skills lines
 // and project descriptions itself and returns edits by ID.
 const SCHEMA = {
   type: "object",
   additionalProperties: false,
   properties: {
     keywords: { type: "array", items: { type: "string" }, description: "All JD hard-skill keywords, most important first." },
-    missing: { type: "array", items: { type: "string" }, description: "Which of those are NOT already in the résumé." },
+    missing: { type: "array", items: { type: "string" }, description: "Which of those are NOT already in the resume." },
     appends: {
       type: "array",
       description: "Append one keyword to the end of a SKILLS line that has room.",
@@ -63,16 +63,16 @@ const SCHEMA = {
 } as const;
 
 const SYSTEM = [
-  "You tailor a résumé to a job description by adding its missing hard-skill keywords. You are given the ENTIRE résumé as numbered lines (L#) with each line's spare-character room, plus its bullet points (B#). YOU decide which lines are the technical-skills lines and which bullets are PROJECT descriptions — do not assume any particular headings or wording.",
+  "You tailor a resume to a job description by adding its missing hard-skill keywords. You are given the ENTIRE resume as numbered lines (L#) with each line's spare-character room, plus its bullet points (B#). YOU decide which lines are the technical-skills lines and which bullets are PROJECT descriptions — do not assume any particular headings or wording.",
   "Edit ONLY: (a) the skills-section lines, and (b) bullets that are PROJECT descriptions. NEVER edit education, work experience, achievements, positions, contact info, or their bullets.",
-  "The user will back up each keyword later, so you need not verify it — just place keywords so the résumé still reads cleanly. BE THOROUGH: add EVERY JD keyword that is a technology, tool, method, or hard skill and is not already present — usually 15–40 additions plus several bullet rewrites.",
+  "The user will back up each keyword later, so you need not verify it — just place keywords so the resume still reads cleanly. BE THOROUGH: add EVERY JD keyword that is a technology, tool, method, or hard skill and is not already present — usually 15–40 additions plus several bullet rewrites.",
   "",
   "How to place each missing keyword:",
   "• If a relevant SKILLS line has enough spare room → `appends`: {lineId, keyword}. One keyword per entry; you may send several to the same line (they fill until the room runs out). Prefer the most relevant skills line that has room.",
   "• If the best skills line is FULL (room ~0) → `rewrites`: {lineId, newText, label} — rewrite it about the same length, dropping only its 1–3 least-relevant items to make space; keep the category label (put it in `label`) and all other items.",
   "• For PROJECT description bullets → `bulletRewrites`: {bulletId, rewrite} — rewrite the whole bullet about the same length, weaving in relevant keywords, keeping every fact/tool and the meaning. Do 3–8 of these.",
   "",
-  "Rules: never duplicate a keyword already anywhere in the résumé; keep everything grammatical (never end on a dangling word); never invent metrics or swap a tool's purpose; process keywords in priority order (most important first) so the key ones land before room runs out.",
+  "Rules: never duplicate a keyword already anywhere in the resume; keep everything grammatical (never end on a dangling word); never invent metrics or swap a tool's purpose; process keywords in priority order (most important first) so the key ones land before room runs out.",
 ].join("\n");
 
 export async function POST(req: Request) {
@@ -84,13 +84,13 @@ export async function POST(req: Request) {
 
   const key = process.env.OPENAI_API_KEY;
   if (!key)
-    return NextResponse.json({ error: "Résumé tailoring isn't configured — OPENAI_API_KEY is missing on the server." }, { status: 501 });
+    return NextResponse.json({ error: "Resume tailoring isn't configured — OPENAI_API_KEY is missing on the server." }, { status: 501 });
 
   const body = await req.json().catch(() => null);
   const pdfBase64 = String(body?.pdfBase64 ?? "");
   const jd = String(body?.jd ?? "").slice(0, MAX_JD);
   if (!pdfBase64 || pdfBase64.length > MAX_PDF_B64)
-    return NextResponse.json({ error: "Upload a résumé PDF (max ~9 MB)." }, { status: 400 });
+    return NextResponse.json({ error: "Upload a resume PDF (max ~9 MB)." }, { status: 400 });
   if (jd.trim().length < 40)
     return NextResponse.json({ error: "Paste the full job description." }, { status: 400 });
 
@@ -104,7 +104,7 @@ export async function POST(req: Request) {
   if (parts.text.trim().length < 80)
     return NextResponse.json({ error: "Couldn't extract enough text — is this a text-based PDF?" }, { status: 400 });
 
-  // ID-referenced view of the whole résumé.
+  // ID-referenced view of the whole resume.
   const lineMap = new Map<string, { find: string; label: string; section: string }>();
   const bulletMap = new Map<string, { find: string; section: string }>();
   const lineBlock = parts.lines.map((l, i) => { const id = `L${i + 1}`; lineMap.set(id, { find: l.find, label: l.label, section: l.section }); return `${id} (room ${l.room}): ${l.find}`; });
@@ -113,7 +113,7 @@ export async function POST(req: Request) {
   const userMsg = [
     `JOB DESCRIPTION:\n${jd}`,
     "",
-    "RÉSUMÉ LINES (id, spare room, text):",
+    "RESUME LINES (id, spare room, text):",
     lineBlock.join("\n"),
     "",
     "BULLET POINTS (id, length, text):",

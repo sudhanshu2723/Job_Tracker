@@ -451,7 +451,7 @@ export default function Dashboard({ username }: { username: string }) {
           <IconUsers width={15} height={15} /> Friends
         </button>
         <button className="btn" onClick={() => router.push("/resume")}>
-          📄 Résumé tailor
+          📄 Resume tailor
         </button>
         <button className="btn" onClick={() => router.push("/referral")}>
           ✉️ Referral to Recruiters

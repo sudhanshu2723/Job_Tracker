@@ -1,4 +1,4 @@
-// In-place PDF résumé editing for any text résumé (font auto-detected).
+// In-place PDF resume editing for any text resume (font auto-detected).
 // Three operations, all width-checked so the page never overflows:
 //   • append  — draw a keyword in the empty space at a line's end (line has room).
 //   • line    — swap: TRULY remove a full skills line's text, redraw it (existing
@@ -6,7 +6,7 @@
 //   • bullet  — rewrite a whole project bullet: remove ALL its wrapped lines, then
 //               re-wrap the new (same-length) text across the same lines.
 // Old text is removed from the content stream (not just covered), so an ATS reads
-// one clean résumé. Untouched content stays byte-identical.
+// one clean resume. Untouched content stays byte-identical.
 
 import { readFileSync } from "fs";
 import { join } from "path";
@@ -22,7 +22,7 @@ export interface EditResult {
 }
 
 export interface ResumeParts {
-  text: string; // full résumé text (for dedup / validation)
+  text: string; // full resume text (for dedup / validation)
   lines: { find: string; room: number; label: string; section: string }[]; // every line
   bullets: { find: string; text: string; chars: number; section: string }[]; // every grouped bullet
 }
@@ -168,7 +168,7 @@ async function clearRegions(pdf: any, pageNode: any, targets: { y: number; xMin:
   return true;
 }
 
-// ── résumé structure parsing ────────────────────────────────────────────────
+// ── resume structure parsing ────────────────────────────────────────────────
 // Section header detection — case-insensitive (Title Case or ALL CAPS), used
 // ONLY to PROTECT sensitive sections; the AI still finds skills/projects itself.
 const SECTION_RE =
@@ -276,7 +276,7 @@ const spareChars = (pd: PageData, line: Line) => {
   return Math.max(0, Math.floor((rb - (last.x + last.w) - 3) / (last.size * 0.48)));
 };
 
-/** Whole-résumé view for the AI: every line (with room + label) and every bullet.
+/** Whole-resume view for the AI: every line (with room + label) and every bullet.
  *  No section/keyword assumptions — the AI decides what's a skill line / project. */
 export async function analyzeResume(pdfBytes: Uint8Array): Promise<ResumeParts> {
   const pages = await parse(pdfBytes);

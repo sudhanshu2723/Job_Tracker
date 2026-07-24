@@ -36,7 +36,7 @@ export async function POST(req: Request) {
   if (!EMAIL_RE.test(gmailUser)) return NextResponse.json({ error: "Enter a valid Gmail address." }, { status: 400 });
   if (gmailPass.length < 12) return NextResponse.json({ error: "Enter your 16-character Gmail App Password." }, { status: 400 });
   if (!subject || emailBody.trim().length < 20) return NextResponse.json({ error: "Draft the email first." }, { status: 400 });
-  if (pdfBase64 && pdfBase64.length > MAX_PDF_B64) return NextResponse.json({ error: "Résumé attachment too large." }, { status: 400 });
+  if (pdfBase64 && pdfBase64.length > MAX_PDF_B64) return NextResponse.json({ error: "Resume attachment too large." }, { status: 400 });
 
   const recipients: Recipient[] = [];
   const seen = new Set<string>();

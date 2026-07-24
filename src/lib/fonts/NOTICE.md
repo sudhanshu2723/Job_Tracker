@@ -4,5 +4,5 @@
 Charter. Licensed under the SIL Open Font License 1.1 (OFL), which permits
 bundling and embedding. Source: CTAN `fonts/xcharter`.
 
-Used server-side to redraw edited résumé lines in a font that matches the
-common Charter-family LaTeX résumé templates, so in-place edits look native.
+Used server-side to redraw edited resume lines in a font that matches the
+common Charter-family LaTeX resume templates, so in-place edits look native.

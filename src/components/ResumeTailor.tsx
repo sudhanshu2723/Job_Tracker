@@ -48,14 +48,14 @@ export default function ResumeTailor({ username }: { username: string }) {
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     if (!f) return;
-    if (!/\.pdf$/i.test(f.name)) return toast("Please upload a PDF résumé.", "error");
+    if (!/\.pdf$/i.test(f.name)) return toast("Please upload a PDF resume.", "error");
     setFileName(f.name);
     setPdfB64(await fileToBase64(f));
     setResult(null);
   }
 
   async function tailor() {
-    if (!pdfB64) return toast("Upload your résumé PDF first.", "error");
+    if (!pdfB64) return toast("Upload your resume PDF first.", "error");
     if (jd.trim().length < 40) return toast("Paste the full job description.", "error");
     setBusy(true);
     setResult(null);
@@ -66,7 +66,7 @@ export default function ResumeTailor({ username }: { username: string }) {
         body: JSON.stringify({ pdfBase64: pdfB64, jd }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to tailor résumé.");
+      if (!res.ok) throw new Error(data.error || "Failed to tailor resume.");
       setResult(data);
       const applied = data.edits.filter((e: Edit) => e.applied).length;
       toast(applied ? `Added ${applied} keyword change(s) to your PDF` : "No changes fit — see notes", "success");
@@ -95,23 +95,23 @@ export default function ResumeTailor({ username }: { username: string }) {
           <IconArrowLeft />
         </button>
         <div>
-          <h1>Résumé keyword tailor</h1>
-          <p>Upload your résumé PDF + a job description → missing keywords are filled into your Skills lines and woven into your project descriptions, in place. Work experience and everything else stays identical.</p>
+          <h1>Resume keyword tailor</h1>
+          <p>Upload your resume PDF + a job description → missing keywords are filled into your Skills lines and woven into your project descriptions, in place. Work experience and everything else stays identical.</p>
         </div>
       </header>
 
       <details className="how-box" open>
         <summary>What this is &amp; how to use it</summary>
         <p className="how-lead">
-          Automatically matches your résumé to a specific job. It reads the job description, then edits your PDF <strong>in place</strong> —
+          Automatically matches your resume to a specific job. It reads the job description, then edits your PDF <strong>in place</strong> —
           adding the missing keywords into your skills lines and weaving them into your project bullets — so it passes keyword screening (ATS)
           while your layout, fonts, and work experience stay exactly the same.
         </p>
         <ol>
-          <li><strong>Upload &amp; paste.</strong> Add your résumé (PDF) and paste the full job description.</li>
-          <li><strong>Tailor.</strong> Click <em>Tailor résumé</em> — the AI fills missing keywords into your skills and rewrites project descriptions to include them.</li>
+          <li><strong>Upload &amp; paste.</strong> Add your resume (PDF) and paste the full job description.</li>
+          <li><strong>Tailor.</strong> Click <em>Tailor resume</em> — the AI fills missing keywords into your skills and rewrites project descriptions to include them.</li>
           <li><strong>Review.</strong> See the keyword coverage and exactly what was added or reworded — nothing outside skills and projects is touched.</li>
-          <li><strong>Preview.</strong> Check the edited résumé on the right; the layout and everything else is unchanged.</li>
+          <li><strong>Preview.</strong> Check the edited resume on the right; the layout and everything else is unchanged.</li>
           <li><strong>Download.</strong> Grab the tailored PDF and submit it for that role.</li>
         </ol>
       </details>
@@ -122,7 +122,7 @@ export default function ResumeTailor({ username }: { username: string }) {
           <div className="resume-box">
             <section className="fr-section" style={{ marginTop: 0 }}>
               <div className="field">
-                <label htmlFor="pdf">Your résumé (PDF)</label>
+                <label htmlFor="pdf">Your resume (PDF)</label>
                 <input id="pdf" type="file" accept="application/pdf,.pdf" onChange={onFile} />
                 {fileName && <span className="cell-sub">Loaded: {fileName}</span>}
               </div>
@@ -131,7 +131,7 @@ export default function ResumeTailor({ username }: { username: string }) {
                 <textarea id="jd" value={jd} onChange={(e) => setJd(e.target.value)} rows={7} placeholder="Paste the full job description here…" />
               </div>
               <button className="btn btn-primary" onClick={tailor} disabled={busy} style={{ marginTop: 14, justifyContent: "center" }}>
-                {busy ? "Updating your PDF…" : "Tailor résumé"}
+                {busy ? "Updating your PDF…" : "Tailor resume"}
               </button>
               {busy && <Spinner label="Reading your PDF, adding keywords in place…" />}
             </section>
@@ -148,7 +148,7 @@ export default function ResumeTailor({ username }: { username: string }) {
                 </section>
 
                 <section className="fr-section">
-                  <h2 className="fr-heading">Added to your résumé ({appliedEdits.length})</h2>
+                  <h2 className="fr-heading">Added to your resume ({appliedEdits.length})</h2>
                   {appliedEdits.length === 0 ? (
                     <div className="empty-mini">Nothing new fit — your Skills/Projects already cover it.</div>
                   ) : (
@@ -182,7 +182,7 @@ export default function ResumeTailor({ username }: { username: string }) {
               <span className="fr-heading" style={{ margin: 0 }}>Preview (edited in place)</span>
               <button className="btn btn-primary" onClick={download}>Download PDF</button>
             </div>
-            {blobUrl && <iframe title="Edited résumé" src={`${blobUrl}#view=FitH`} className="pdf-preview" />}
+            {blobUrl && <iframe title="Edited resume" src={`${blobUrl}#view=FitH`} className="pdf-preview" />}
           </div>
         )}
       </div>

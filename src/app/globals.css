@@ -989,7 +989,7 @@ table.apps {
   padding: 9px 12px;
   font-size: 12.5px;
 }
-/* ---------- Résumé tailor ---------- */
+/* ---------- Resume tailor ---------- */
 .kw-row {
   display: flex;
   flex-wrap: wrap;
@@ -1060,7 +1060,7 @@ table.apps {
   flex-wrap: wrap;
 }
 
-/* ---------- Résumé tailor: controls | preview side-by-side, full width ---------- */
+/* ---------- Resume tailor: controls | preview side-by-side, full width ---------- */
 .resume-page {
   max-width: none;
   margin: 0;
@@ -1170,7 +1170,7 @@ table.apps {
   font-size: 0.9em;
 }
 
-/* ---------- Rendered résumé preview (always black-on-white, print-ready) ---------- */
+/* ---------- Rendered resume preview (always black-on-white, print-ready) ---------- */
 .resume-doc {
   background: #fff;
   color: #111;
