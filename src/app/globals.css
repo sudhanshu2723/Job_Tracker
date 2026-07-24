@@ -1128,6 +1128,47 @@ table.apps {
     grid-template-columns: 1fr;
   }
 }
+/* Referral composer: wide compose/draft column, narrower send column on the right */
+.resume-layout.compose {
+  grid-template-columns: 1fr minmax(340px, 420px);
+}
+@media (max-width: 940px) {
+  .resume-layout.compose {
+    grid-template-columns: 1fr;
+  }
+}
+.resume-send-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+/* "How it works" guide box on the referral page */
+.how-box {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  padding: 14px 18px;
+  margin-top: 16px;
+  max-width: none;
+}
+.how-box > summary {
+  cursor: pointer;
+  font-weight: 600;
+  list-style: none;
+}
+.how-box > summary::-webkit-details-marker { display: none; }
+.how-box > summary::before { content: "▸ "; color: var(--ink-2); }
+.how-box[open] > summary::before { content: "▾ "; }
+.how-box .how-lead { color: var(--ink-2); margin: 12px 0 6px; line-height: 1.55; }
+.how-box ol { margin: 8px 0 2px; padding-left: 22px; }
+.how-box li { margin: 7px 0; color: var(--ink-2); line-height: 1.5; }
+.how-box code {
+  background: var(--surface-2, rgba(127,127,127,0.12));
+  padding: 1px 5px;
+  border-radius: 5px;
+  font-size: 0.9em;
+}
 
 /* ---------- Rendered résumé preview (always black-on-white, print-ready) ---------- */
 .resume-doc {

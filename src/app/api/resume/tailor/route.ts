@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { enforceRateLimit } from "@/lib/rateLimit";
-import { analyzeResume, applyEdits, type PdfOp } from "@/lib/pdfEdit";
+import { analyzeResume, applyEdits, isProtectedSection, type PdfOp } from "@/lib/pdfEdit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -10,57 +10,71 @@ export const maxDuration = 60;
 const MAX_PDF_B64 = 12_000_000;
 const MAX_JD = 25_000;
 
-// The model references résumé parts by ID and returns keyword placements.
+// The whole résumé is sent line-by-line; the model identifies the skills lines
+// and project descriptions itself and returns edits by ID.
 const SCHEMA = {
   type: "object",
   additionalProperties: false,
   properties: {
     keywords: { type: "array", items: { type: "string" }, description: "All JD hard-skill keywords, most important first." },
     missing: { type: "array", items: { type: "string" }, description: "Which of those are NOT already in the résumé." },
-    skillEdits: {
+    appends: {
       type: "array",
-      description: "Add one JD keyword to a skills/tech line (by id).",
+      description: "Append one keyword to the end of a SKILLS line that has room.",
       items: {
         type: "object",
         additionalProperties: false,
         properties: {
-          id: { type: "string", description: "The line id, e.g. 'S2' or 'T1'." },
-          keyword: { type: "string", description: "The single JD keyword to add to that line." },
-          swapOut: { type: "string", description: "Only if that line is full (spare ~0): the EXACT least-relevant existing item on it to drop to make room; else ''." },
+          lineId: { type: "string", description: "The line id, e.g. 'L23'." },
+          keyword: { type: "string", description: "The single JD keyword to append." },
         },
-        required: ["id", "keyword", "swapOut"],
+        required: ["lineId", "keyword"],
       },
     },
-    descEdits: {
+    rewrites: {
       type: "array",
-      description: "Rewrite a project description bullet (by id) to weave in JD keywords, same length.",
+      description: "Rewrite a FULL skills line (no room left) to swap its least-relevant items for JD keywords, same length.",
       items: {
         type: "object",
         additionalProperties: false,
         properties: {
-          id: { type: "string", description: "The bullet id, e.g. 'B1'." },
-          rewrite: { type: "string", description: "The whole bullet rewritten, ABOUT THE SAME LENGTH as the original, weaving in relevant JD keywords while keeping every existing fact/tool and the original meaning." },
+          lineId: { type: "string", description: "The line id." },
+          newText: { type: "string", description: "The whole line rewritten, ABOUT THE SAME LENGTH, keeping the category label and most items, dropping only 1–3 least-relevant items for JD keywords." },
+          label: { type: "string", description: "The line's leading category label (e.g. 'Languages', 'Core Competencies') so it stays bold — must be the exact start of newText. '' if none." },
         },
-        required: ["id", "rewrite"],
+        required: ["lineId", "newText", "label"],
+      },
+    },
+    bulletRewrites: {
+      type: "array",
+      description: "Rewrite a PROJECT description bullet to weave in JD keywords, same length.",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          bulletId: { type: "string", description: "The bullet id, e.g. 'B4'." },
+          rewrite: { type: "string", description: "The whole bullet rewritten, ABOUT THE SAME LENGTH, weaving in relevant JD keywords while keeping every existing fact/tool and the original meaning." },
+        },
+        required: ["bulletId", "rewrite"],
       },
     },
   },
-  required: ["keywords", "missing", "skillEdits", "descEdits"],
+  required: ["keywords", "missing", "appends", "rewrites", "bulletRewrites"],
 } as const;
 
 const SYSTEM = [
-  "You tailor a résumé to a job description by adding the JD's missing hard-skill keywords, editing ONLY the skills and project sections given. The user will back up each keyword later, so you need not verify it — just place keywords so the résumé still reads cleanly.",
-  "BE THOROUGH: add EVERY JD keyword that is a technology, tool, method, framework, or hard skill and is NOT already present. That is usually 15–40 additions across the skill lines, plus rewrites of several description bullets. Do not stop after a few.",
+  "You tailor a résumé to a job description by adding its missing hard-skill keywords. You are given the ENTIRE résumé as numbered lines (L#) with each line's spare-character room, plus its bullet points (B#). YOU decide which lines are the technical-skills lines and which bullets are PROJECT descriptions — do not assume any particular headings or wording.",
+  "Edit ONLY: (a) the skills-section lines, and (b) bullets that are PROJECT descriptions. NEVER edit education, work experience, achievements, positions, contact info, or their bullets.",
+  "The user will back up each keyword later, so you need not verify it — just place keywords so the résumé still reads cleanly. BE THOROUGH: add EVERY JD keyword that is a technology, tool, method, or hard skill and is not already present — usually 15–40 additions plus several bullet rewrites.",
   "",
-  "You are given, with IDs:",
-  "• SKILL LINES (S#) — each with its spare-character room. Put each keyword under the MOST RELEVANT category line that has room, and fill that room. Only fall back to a general line (e.g. Languages) if no relevant line has space. One keyword per skillEdit. Only if the best line has ~0 spare, set `swapOut` to the least-relevant existing item to drop — but drop only 1–3 items per line at most; NEVER strip a line's core/primary skills.",
-  "• TECH LINES (T#) — project title/stack lines you may also append keywords to (same rules).",
-  "• DESCRIPTION BULLETS (B#) — for 3–8 bullets, return a `rewrite`: the WHOLE bullet rewritten to ABOUT THE SAME LENGTH (±10%), weaving in relevant JD keywords while keeping every existing fact/tool and the original meaning. Never invent metrics; never swap a tool's purpose; never end on a dangling word.",
+  "How to place each missing keyword:",
+  "• If a relevant SKILLS line has enough spare room → `appends`: {lineId, keyword}. One keyword per entry; you may send several to the same line (they fill until the room runs out). Prefer the most relevant skills line that has room.",
+  "• If the best skills line is FULL (room ~0) → `rewrites`: {lineId, newText, label} — rewrite it about the same length, dropping only its 1–3 least-relevant items to make space; keep the category label (put it in `label`) and all other items.",
+  "• For PROJECT description bullets → `bulletRewrites`: {bulletId, rewrite} — rewrite the whole bullet about the same length, weaving in relevant keywords, keeping every fact/tool and the meaning. Do 3–8 of these.",
   "",
-  "Put each keyword under the most relevant line/bullet. Never add a keyword that already appears anywhere in the résumé. Prioritise the most important JD keywords first (so if room runs out, the key ones are already placed).",
+  "Rules: never duplicate a keyword already anywhere in the résumé; keep everything grammatical (never end on a dangling word); never invent metrics or swap a tool's purpose; process keywords in priority order (most important first) so the key ones land before room runs out.",
 ].join("\n");
 
-// POST /api/resume/tailor  { pdfBase64, jd } -> { editedPdfBase64, edits[], keywords[], missing[] }
 export async function POST(req: Request) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
@@ -90,25 +104,21 @@ export async function POST(req: Request) {
   if (parts.text.trim().length < 80)
     return NextResponse.json({ error: "Couldn't extract enough text — is this a text-based PDF?" }, { status: 400 });
 
-  // Build the ID-referenced résumé view for the model.
-  const skillMap = new Map<string, string>(); // id -> line find text
-  const bulletMap = new Map<string, string>(); // id -> bullet find text
-  const skillsBlock = parts.skillLines.map((l, i) => { const id = `S${i + 1}`; skillMap.set(id, l.find); return `${id} (spare ~${l.spare} chars): ${l.find}`; });
-  const techBlock = parts.techLines.map((l, i) => { const id = `T${i + 1}`; skillMap.set(id, l.find); return `${id} (spare ~${l.spare} chars): ${l.find}`; });
-  const bulletBlock = parts.bullets.map((b, i) => { const id = `B${i + 1}`; bulletMap.set(id, b.find); return `${id} (~${b.chars} chars): ${b.text}`; });
+  // ID-referenced view of the whole résumé.
+  const lineMap = new Map<string, { find: string; label: string; section: string }>();
+  const bulletMap = new Map<string, { find: string; section: string }>();
+  const lineBlock = parts.lines.map((l, i) => { const id = `L${i + 1}`; lineMap.set(id, { find: l.find, label: l.label, section: l.section }); return `${id} (room ${l.room}): ${l.find}`; });
+  const bulletBlock = parts.bullets.map((b, i) => { const id = `B${i + 1}`; bulletMap.set(id, { find: b.find, section: b.section }); return `${id} (~${b.chars} chars): ${b.text}`; });
 
   const userMsg = [
     `JOB DESCRIPTION:\n${jd}`,
     "",
-    "SKILL LINES:",
-    skillsBlock.join("\n") || "(none)",
+    "RÉSUMÉ LINES (id, spare room, text):",
+    lineBlock.join("\n"),
     "",
-    "TECH LINES (project title / stack):",
-    techBlock.join("\n") || "(none)",
-    "",
-    "DESCRIPTION BULLETS:",
+    "BULLET POINTS (id, length, text):",
     bulletBlock.join("\n") || "(none)",
-  ].join("\n").slice(0, 24_000);
+  ].join("\n").slice(0, 40_000);
 
   let ai: Response;
   try {
@@ -139,8 +149,9 @@ export async function POST(req: Request) {
   let parsed: {
     keywords?: string[];
     missing?: string[];
-    skillEdits?: { id: string; keyword: string; swapOut: string }[];
-    descEdits?: { id: string; rewrite: string }[];
+    appends?: { lineId: string; keyword: string }[];
+    rewrites?: { lineId: string; newText: string; label: string }[];
+    bulletRewrites?: { bulletId: string; rewrite: string }[];
   };
   try {
     parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}");
@@ -153,54 +164,32 @@ export async function POST(req: Request) {
   const present = (k: string) => !!k && new RegExp(`(^|[^a-z0-9])${escapeRe(k.toLowerCase())}([^a-z0-9]|$)`).test(resumeLower);
   const danglingRe = /\b(and|or|with|using|for|to|the|a|an|of|in|on|via)\s*[.,;]?\s*$/i;
 
-  // ── build PDF operations ──────────────────────────────────────────────────
   const ops: PdfOp[] = [];
   const meta: { section: string; keyword: string; detail: string }[] = [];
 
-  // Skills: appends to lines with room; per-line consolidation of swap-outs.
-  const parseSkill = (t: string) => { const i = t.indexOf(": "); return i < 0 ? { label: "", skills: t.split(",").map((s) => s.trim()).filter(Boolean) } : { label: t.slice(0, i), skills: t.slice(i + 2).split(",").map((s) => s.trim()).filter(Boolean) }; };
-  // cross-line duplicate detection for extra room when swapping.
-  const tokCount = new Map<string, number>();
-  const owner = new Map<string, string>();
-  for (const l of parts.skillLines) for (const s of new Set(parseSkill(l.find).skills.map((x) => x.toLowerCase()))) { tokCount.set(s, (tokCount.get(s) ?? 0) + 1); if (!owner.has(s)) owner.set(s, l.find); }
-
-  const swapByLine = new Map<string, { kws: string[]; drop: Set<string> }>();
-  for (const e of parsed.skillEdits ?? []) {
-    const find = skillMap.get(String(e.id).trim().toUpperCase());
+  // Safety net: never edit a line/bullet the parser places in a protected
+  // section (work experience, education, achievements, …), even if the AI picked it.
+  const lid = (id: string) => lineMap.get(String(id).trim().toUpperCase());
+  for (const e of parsed.appends ?? []) {
+    const L = lid(e.lineId);
     const kw = String(e.keyword ?? "").trim();
-    if (!find || !kw || present(kw)) continue;
-    if (e.swapOut && e.swapOut.trim()) {
-      const g = swapByLine.get(find) ?? { kws: [], drop: new Set<string>() };
-      if (!g.kws.some((k) => k.toLowerCase() === kw.toLowerCase())) g.kws.push(kw);
-      g.drop.add(e.swapOut.trim().toLowerCase());
-      swapByLine.set(find, g);
-    } else {
-      ops.push({ kind: "append", find, text: `, ${kw}` });
-      meta.push({ section: "Skills", keyword: kw, detail: `added to “${parseSkill(find).label || find.slice(0, 24)}”` });
-    }
+    if (!L || !kw || present(kw) || isProtectedSection(L.section)) continue;
+    ops.push({ kind: "append", find: L.find, text: `, ${kw}` });
+    meta.push({ section: "Skills", keyword: kw, detail: `added to “${(L.label || L.find).slice(0, 26)}”` });
   }
-  for (const [find, { kws, drop }] of swapByLine) {
-    const { label, skills } = parseSkill(find);
-    if (!label) continue;
-    // Never gut a line: drop at most ~1/3 of its skills, and add that many keywords.
-    const maxSwap = Math.max(1, Math.floor(skills.length / 3));
-    // Prefer dropping cross-line duplicates, then the model's flagged skills.
-    const dupDrops = skills.filter((s) => { const k = s.toLowerCase(); return (tokCount.get(k) ?? 0) >= 2 && owner.get(k) !== find; }).map((s) => s.toLowerCase());
-    const dropOrder = [...new Set([...dupDrops, ...drop])].slice(0, maxSwap);
-    const addKws = kws.slice(0, dropOrder.length);
-    if (!addKws.length) continue;
-    const dropSet = new Set(dropOrder);
-    const kept = skills.filter((s) => !dropSet.has(s.toLowerCase()));
-    ops.push({ kind: "line", find, text: `${label}: ${[...kept, ...addKws].join(", ")}`, boldPrefix: `${label}:` });
-    meta.push({ section: "Skills", keyword: addKws.join(", "), detail: `swapped ${dropOrder.join(", ")} → ${addKws.join(", ")}` });
+  for (const e of parsed.rewrites ?? []) {
+    const L = lid(e.lineId);
+    const newText = String(e.newText ?? "").trim();
+    if (!L || newText.length < 8 || danglingRe.test(newText) || isProtectedSection(L.section)) continue;
+    const label = String(e.label ?? "").trim() || L.label;
+    ops.push({ kind: "line", find: L.find, text: newText, boldPrefix: label && newText.startsWith(label) ? label : undefined });
+    meta.push({ section: "Skills", keyword: "", detail: `reworded → “${newText.slice(0, 80)}”` });
   }
-
-  // Descriptions: whole-bullet rewrites.
-  for (const e of parsed.descEdits ?? []) {
-    const find = bulletMap.get(String(e.id).trim().toUpperCase());
+  for (const e of parsed.bulletRewrites ?? []) {
+    const b = bulletMap.get(String(e.bulletId).trim().toUpperCase());
     const rewrite = String(e.rewrite ?? "").trim();
-    if (!find || rewrite.length < 20 || danglingRe.test(rewrite)) continue;
-    ops.push({ kind: "bullet", find, text: rewrite });
+    if (!b || rewrite.length < 20 || danglingRe.test(rewrite) || isProtectedSection(b.section)) continue;
+    ops.push({ kind: "bullet", find: b.find, text: rewrite });
     meta.push({ section: "Projects", keyword: "", detail: rewrite });
   }
 

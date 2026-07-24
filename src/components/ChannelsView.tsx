@@ -103,6 +103,20 @@ export default function ChannelsView({ username }: { username: string }) {
         </div>
       </header>
 
+      <details className="how-box" open>
+        <summary>What this is &amp; how to use it</summary>
+        <p className="how-lead">
+          Channels are curated job feeds (by role, company, or source). Subscribe to the ones that fit what you&apos;re looking for, and
+          fresh postings from those feeds flow into your application tracker automatically — no manual searching every day.
+        </p>
+        <ol>
+          <li><strong>Browse or search.</strong> Use the search box to find feeds by role, company, or keyword.</li>
+          <li><strong>Subscribe.</strong> Click <em>Subscribe</em> on the feeds you want to follow.</li>
+          <li><strong>Auto-sync.</strong> New postings from your subscribed feeds appear in your job list automatically.</li>
+          <li><strong>Unsubscribe.</strong> Click <em>Unsubscribe</em> anytime to stop a feed.</li>
+        </ol>
+      </details>
+
       {error && <div className="auth-error">{error}</div>}
       {!channels && !error && <Spinner label="Loading feeds…" full />}
 

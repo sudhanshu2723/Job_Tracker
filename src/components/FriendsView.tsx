@@ -182,6 +182,21 @@ export default function FriendsView({ username }: { username: string }) {
         </div>
       </header>
 
+      <details className="how-box" open>
+        <summary>What this is &amp; how to use it</summary>
+        <p className="how-lead">
+          Connect with friends to see where they&apos;re applying. Once you&apos;re friends, the job applications they&apos;ve chosen to share
+          automatically show up in your list — handy for swapping referrals and following each other&apos;s job hunt.
+        </p>
+        <ol>
+          <li><strong>Search.</strong> Type a friend&apos;s username in the search box.</li>
+          <li><strong>Add.</strong> Hit <em>Add</em> to send them a friend request.</li>
+          <li><strong>Accept.</strong> When someone requests you, <em>Accept</em> (or decline) it from the requests list.</li>
+          <li><strong>Sync.</strong> Your friends&apos; shared applications appear in your list automatically.</li>
+          <li><strong>Manage.</strong> Remove a friend anytime to stop syncing.</li>
+        </ol>
+      </details>
+
       {error && <div className="auth-error">{error}</div>}
       {!friends && !error && <Spinner label="Loading friends…" full />}
 

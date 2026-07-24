@@ -100,6 +100,22 @@ export default function ResumeTailor({ username }: { username: string }) {
         </div>
       </header>
 
+      <details className="how-box" open>
+        <summary>What this is &amp; how to use it</summary>
+        <p className="how-lead">
+          Automatically matches your résumé to a specific job. It reads the job description, then edits your PDF <strong>in place</strong> —
+          adding the missing keywords into your skills lines and weaving them into your project bullets — so it passes keyword screening (ATS)
+          while your layout, fonts, and work experience stay exactly the same.
+        </p>
+        <ol>
+          <li><strong>Upload &amp; paste.</strong> Add your résumé (PDF) and paste the full job description.</li>
+          <li><strong>Tailor.</strong> Click <em>Tailor résumé</em> — the AI fills missing keywords into your skills and rewrites project descriptions to include them.</li>
+          <li><strong>Review.</strong> See the keyword coverage and exactly what was added or reworded — nothing outside skills and projects is touched.</li>
+          <li><strong>Preview.</strong> Check the edited résumé on the right; the layout and everything else is unchanged.</li>
+          <li><strong>Download.</strong> Grab the tailored PDF and submit it for that role.</li>
+        </ol>
+      </details>
+
       <div className={`resume-layout${result ? " has-preview" : ""}`}>
         {/* Left: controls, keyword coverage, applied changes */}
         <div className="resume-controls">

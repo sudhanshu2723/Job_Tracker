@@ -23,9 +23,8 @@ export interface EditResult {
 
 export interface ResumeParts {
   text: string; // full résumé text (for dedup / validation)
-  skillLines: { find: string; spare: number }[]; // "Category: a, b, c" skill lines
-  techLines: { find: string; spare: number }[]; // project title / tech-stack lines
-  bullets: { find: string; text: string; chars: number }[]; // grouped project description bullets
+  lines: { find: string; room: number; label: string; section: string }[]; // every line
+  bullets: { find: string; text: string; chars: number; section: string }[]; // every grouped bullet
 }
 
 const norm = (s: string) => s.replace(/\s+/g, " ").trim().toLowerCase();
@@ -170,17 +169,41 @@ async function clearRegions(pdf: any, pageNode: any, targets: { y: number; xMin:
 }
 
 // ── résumé structure parsing ────────────────────────────────────────────────
+// Section header detection — case-insensitive (Title Case or ALL CAPS), used
+// ONLY to PROTECT sensitive sections; the AI still finds skills/projects itself.
 const SECTION_RE =
-  /^(EDUCATION|TECHNICAL SKILLS|SKILLS|WORK EXPERIENCE|PROFESSIONAL EXPERIENCE|EXPERIENCE|PROJECTS|PERSONAL PROJECTS|ACHIEVEMENTS|AWARDS|SUMMARY|OBJECTIVE|CERTIFICATIONS|POSITIONS OF RESPONSIBILITY|EXTRACURRICULAR)\b/i;
+  /^(EDUCATION|TECHNICAL SKILLS|SKILLS|CORE COMPETENC\w+|WORK EXPERIENCE|PROFESSIONAL EXPERIENCE|EXPERIENCE|INTERNSHIPS?|EMPLOYMENT|PROJECTS|PERSONAL PROJECTS|ACADEMIC PROJECTS|ACHIEVEMENTS|AWARDS|HONOU?RS?|SUMMARY|OBJECTIVE|CERTIFICATIONS?|POSITIONS OF RESPONSIBILITY|RESPONSIBILITIES|EXTRACURRICULAR|VOLUNTEER\w*|LEADERSHIP|PUBLICATIONS?)\b/i;
 function sectionOf(line: string, current: string): string {
   const t = line.trim();
-  if (t.length <= 42 && SECTION_RE.test(t) && t === t.toUpperCase()) return SECTION_RE.exec(t)![1].toLowerCase();
+  if (t.length <= 30 && t.split(/\s+/).length <= 3 && !/[,:0-9]/.test(t) && SECTION_RE.test(t)) return SECTION_RE.exec(t)![1].toLowerCase();
   return current;
+}
+/** True for sections whose content must never be edited. */
+export const isProtectedSection = (s: string) => /educat|experience|internship|employ|achiev|award|honou?r|certificat|position|responsibilit|extracurric|volunteer|leadership|publication/i.test(s);
+
+// The label of a "Category  values" line — detected structurally (a colon, or a
+// tab/wide-gap before the values), NOT by any keyword. Works for "Languages:",
+// "Core Competencies", "Tech Stack", etc. "" when the line isn't label+values.
+function detectLabel(items: { str: string; x: number; w: number }[]): string {
+  const text = items.map((i) => i.str).join("");
+  const ci = text.indexOf(": ");
+  if (ci > 0 && ci <= 30) return text.slice(0, ci).trim();
+  for (let k = 0; k < items.length - 1; k++) {
+    if (!items[k].str.trim()) continue;
+    const nxt = items[k + 1];
+    const wideSpace = !nxt.str.trim() && nxt.w >= 8;
+    const gap = nxt.x - (items[k].x + items[k].w);
+    if (wideSpace || gap >= 8) {
+      const lab = items.slice(0, k + 1).map((i) => i.str).join("").trim();
+      return lab && lab.length <= 30 ? lab : "";
+    }
+  }
+  return "";
 }
 
 type Item = { str: string; x: number; y: number; w: number; size: number };
 type Line = { text: string; items: Item[]; section: string };
-type Bullet = { lineIdxs: number[]; xBullet: number; xText: number; size: number; ys: number[]; text: string; find: string };
+type Bullet = { lineIdxs: number[]; xBullet: number; xText: number; size: number; ys: number[]; text: string; find: string; section: string };
 type PageData = { items: Item[]; lines: Line[]; pageW: number; pageRight: number; bullets: Bullet[] };
 
 async function parse(pdfBytes: Uint8Array): Promise<PageData[]> {
@@ -208,19 +231,18 @@ async function parse(pdfBytes: Uint8Array): Promise<PageData[]> {
     flush();
     const pageRight = Math.min(pageW - 18, Math.max(...items.map((i) => i.x + i.w)));
 
-    // Group description bullets (in projects / experience sections) by indent.
+    // Group bullets anywhere by indent; the AI decides which are project ones.
     const bullets: Bullet[] = [];
-    const isDesc = (s: string) => /project/i.test(s); // projects only — never work experience
     for (let i = 0; i < lines.length; i++) {
       const L = lines[i];
-      if (!isDesc(L.section) || !looksBullet(L.items)) continue;
+      if (!looksBullet(L.items)) continue;
       const textItem = bulletTextItem(L.items);
       const xText = textItem.x;
       const idxs = [i];
       let j = i + 1;
       while (j < lines.length) {
         const Lj = lines[j];
-        if (!isDesc(Lj.section) || !Lj.items.length) break;
+        if (!Lj.items.length) break;
         if (looksBullet(Lj.items)) break;
         if (Math.abs(Lj.items[0].x - xText) > 4) break; // back to margin = title/new block
         idxs.push(j); j++;
@@ -234,6 +256,7 @@ async function parse(pdfBytes: Uint8Array): Promise<PageData[]> {
         ys: grp.map((g) => g.items[g.items.length - 1].y),
         text: stripBullet(grp.map((g) => g.text).join(" ")).replace(/\s+/g, " ").trim(),
         find: stripBullet(L.text).replace(/\s+/g, " ").trim(),
+        section: L.section,
       });
       i = j - 1;
     }
@@ -253,29 +276,22 @@ const spareChars = (pd: PageData, line: Line) => {
   return Math.max(0, Math.floor((rb - (last.x + last.w) - 3) / (last.size * 0.48)));
 };
 
-/** Structured view for building the AI prompt. */
+/** Whole-résumé view for the AI: every line (with room + label) and every bullet.
+ *  No section/keyword assumptions — the AI decides what's a skill line / project. */
 export async function analyzeResume(pdfBytes: Uint8Array): Promise<ResumeParts> {
   const pages = await parse(pdfBytes);
-  const skillLines: ResumeParts["skillLines"] = [];
-  const techLines: ResumeParts["techLines"] = [];
+  const lines: ResumeParts["lines"] = [];
   const bullets: ResumeParts["bullets"] = [];
   for (const pd of pages) {
     const inBullet = new Set(pd.bullets.flatMap((b) => b.lineIdxs));
     pd.lines.forEach((L, i) => {
-      if (/skill/i.test(L.section) && L.text.includes(": ")) skillLines.push({ find: L.text, spare: spareChars(pd, L) });
-      else if (/project/i.test(L.section) && !inBullet.has(i) && L.items.length >= 2 && !looksBullet(L.items))
-        techLines.push({ find: L.text, spare: spareChars(pd, L) });
+      if (!L.text.trim() || inBullet.has(i)) return; // bullet lines are offered as bullets
+      lines.push({ find: L.text, room: spareChars(pd, L), label: detectLabel(L.items), section: L.section });
     });
-    for (const b of pd.bullets) bullets.push({ find: b.find, text: b.text, chars: b.text.length });
+    for (const b of pd.bullets) bullets.push({ find: b.find, text: b.text, chars: b.text.length, section: b.section });
   }
   const text = pages.flatMap((pd) => pd.lines.map((L) => L.text)).join("\n");
-  return { text, skillLines, techLines, bullets };
-}
-
-/** Plain per-line list (kept for callers that only need text/section). */
-export async function analyzeLines(pdfBytes: Uint8Array): Promise<{ text: string; section: string }[]> {
-  const pages = await parse(pdfBytes);
-  return pages.flatMap((pd) => pd.lines.map((L) => ({ text: L.text, section: L.section })));
+  return { text, lines, bullets };
 }
 
 export async function applyEdits(pdfBytes: Uint8Array, ops: PdfOp[]): Promise<EditResult> {

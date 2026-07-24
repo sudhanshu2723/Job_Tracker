@@ -453,6 +453,9 @@ export default function Dashboard({ username }: { username: string }) {
         <button className="btn" onClick={() => router.push("/resume")}>
           📄 Résumé tailor
         </button>
+        <button className="btn" onClick={() => router.push("/referral")}>
+          ✉️ Referral to Recruiters
+        </button>
         <button
           className="btn btn-primary"
           onClick={() => {
