@@ -989,6 +989,218 @@ table.apps {
   padding: 9px 12px;
   font-size: 12.5px;
 }
+/* ---------- Résumé tailor ---------- */
+.kw-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.kw {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.kw-have {
+  color: var(--good);
+  background: color-mix(in srgb, var(--good) 13%, transparent);
+}
+.kw-missing {
+  color: #9a6b00;
+  background: color-mix(in srgb, #e0a000 20%, transparent);
+}
+.edit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.edit-card {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  cursor: pointer;
+}
+.edit-card.on {
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.edit-card input {
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  accent-color: var(--accent);
+  flex: none;
+}
+.edit-body {
+  min-width: 0;
+  flex: 1;
+}
+.edit-old {
+  font-size: 13px;
+  color: var(--muted);
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--bad) 55%, transparent);
+}
+.edit-new {
+  font-size: 13.5px;
+  color: var(--ink);
+  font-weight: 500;
+  margin-top: 4px;
+}
+.edit-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+/* ---------- Résumé tailor: controls | preview side-by-side, full width ---------- */
+.resume-page {
+  max-width: none;
+  margin: 0;
+  padding: 24px 28px 90px;
+}
+.resume-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 40px;
+  align-items: start;
+  margin-top: 16px;
+}
+.resume-layout.has-preview {
+  grid-template-columns: minmax(340px, 400px) 1fr;
+}
+.resume-controls {
+  min-width: 0;
+}
+.resume-controls .fr-section {
+  margin-top: 20px;
+}
+/* Box around the left controls */
+.resume-box {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  padding: 20px;
+}
+/* Right column: download bar above preview, spaced apart */
+.resume-preview-col {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.preview-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.pdf-preview {
+  width: 100%;
+  height: 88vh;
+  min-height: 640px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+  box-shadow: var(--shadow-md);
+}
+.kw-changes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.kw-change {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+@media (max-width: 940px) {
+  .resume-layout.has-preview {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- Rendered résumé preview (always black-on-white, print-ready) ---------- */
+.resume-doc {
+  background: #fff;
+  color: #111;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 10.5px;
+  line-height: 1.34;
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  padding: 40px 46px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: var(--shadow-md);
+}
+.resume-doc .r-name {
+  text-align: center;
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0 0 4px;
+  color: #111;
+  letter-spacing: 0.2px;
+}
+.resume-doc .r-contact {
+  text-align: center;
+  font-size: 10px;
+  color: #333;
+  margin-bottom: 12px;
+}
+.resume-doc .r-section { margin-top: 11px; }
+.resume-doc .r-heading {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #111;
+  margin: 0 0 5px;
+  padding-bottom: 2px;
+  border-bottom: 1px solid #333;
+}
+.resume-doc .r-item { margin-bottom: 6px; }
+.resume-doc .r-item-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.resume-doc .r-left { font-weight: 700; }
+.resume-doc .r-right { font-weight: 700; white-space: nowrap; }
+.resume-doc .r-sub { font-style: italic; }
+.resume-doc .r-text { margin: 1px 0; }
+.resume-doc .r-bullets {
+  margin: 2px 0 0;
+  padding-left: 16px;
+}
+.resume-doc .r-bullets li { margin-bottom: 1.5px; }
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff !important; }
+  .app, .friends-wrap, .resume-page { max-width: none !important; padding: 0 !important; margin: 0 !important; width: auto !important; }
+  .resume-layout, .resume-layout.has-preview { display: block !important; grid-template-columns: none !important; gap: 0 !important; margin: 0 !important; }
+  #resume-print.resume-doc {
+    box-shadow: none;
+    border: none;
+    border-radius: 0;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+  @page { margin: 0.45in; }
+}
+
 .user-chip {
   display: inline-flex;
   align-items: center;
